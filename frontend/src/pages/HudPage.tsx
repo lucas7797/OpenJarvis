@@ -504,6 +504,8 @@ export function HudPage() {
                 'open websites (open_url), open apps (open_app), open files or folders (open_path), check the PC (system_status), ' +
                 'run commands (run_pc_command) and hand coding or multi-step computer work to Claude Code (delegate_to_claude_code). ' +
                 'Running commands and Claude Code tasks ask the user to approve on screen; say so briefly when you use them. ' +
+                'You have long-term memory: facts the user shares are saved automatically and remembered in future sessions, ' +
+                'so when asked to remember something, confirm that you will (never claim you cannot remember). ' +
                 'Files and images the user attaches are added to their message (images as a description); ' +
                 'earlier attachments can be found with list_attachments, read with read_attachment and kept long-term with save_attachment_to_knowledge.',
             },
