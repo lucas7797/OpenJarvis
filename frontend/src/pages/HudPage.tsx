@@ -172,10 +172,11 @@ function Typewriter({ text, onTick }: { text: string; onTick?: () => void }) {
 }
 
 // Voice commands are answered out loud, so a long markdown answer means a long
-// wait (synthesis) and a long listen. Ask for a short spoken reply instead.
-const SPOKEN_REPLY_RULE =
-  ' This message was spoken and your reply will be read aloud: answer in one to three short, ' +
-  'natural sentences with no lists, headings or markdown, unless the user asks for detail.';
+// wait (synthesis) and a long listen. Small local models ignore a brevity rule
+// buried in the system prompt but follow one attached to the question itself,
+// so it goes on the spoken turn only (never shown, never kept in history).
+const SPOKEN_REPLY_SUFFIX =
+  '\n\n(Spoken request: reply in at most two short spoken sentences, plain words, no lists or markdown.)';
 
 export function HudPage() {
   const navigate = useNavigate();
@@ -538,10 +539,12 @@ export function HudPage() {
                 'You have long-term memory: facts the user shares are saved automatically and remembered in future sessions, ' +
                 'so when asked to remember something, confirm that you will (never claim you cannot remember). ' +
                 'Files and images the user attaches are added to their message (images as a description); ' +
-                'earlier attachments can be found with list_attachments, read with read_attachment and kept long-term with save_attachment_to_knowledge.' +
-                (opts.spoken ? SPOKEN_REPLY_RULE : ''),
+                'earlier attachments can be found with list_attachments, read with read_attachment and kept long-term with save_attachment_to_knowledge.',
             },
-            ...history.slice(-12).map((m) => ({ role: m.role, content: m.content })),
+            ...history.slice(-12).map((m) => ({
+              role: m.role,
+              content: opts.spoken && m.id === userMsg.id ? m.content + SPOKEN_REPLY_SUFFIX : m.content,
+            })),
           ],
           attachments: attached.length ? attached.map((a) => a.id) : undefined,
         },
