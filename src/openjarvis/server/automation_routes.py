@@ -88,7 +88,12 @@ async def automation_status(request: Request) -> Dict[str, Any]:
     import os
 
     from openjarvis.scheduler.settings import get_default_timezone
-    from openjarvis.server.smart_routing import claude_available, claude_model
+    from openjarvis.server.smart_routing import (
+        claude_available,
+        claude_model,
+        openai_available,
+        openai_model,
+    )
     from openjarvis.tools.claude_code_worker import claude_code_ready
 
     engine = getattr(request.app.state, "engine", None)
@@ -108,6 +113,11 @@ async def automation_status(request: Request) -> Dict[str, Any]:
             "model": claude_model(),
             "key_set": bool(os.environ.get("ANTHROPIC_API_KEY")),
             "available": claude_available(engine),
+        },
+        "openai": {
+            "model": openai_model(),
+            "key_set": bool(os.environ.get("OPENAI_API_KEY")),
+            "available": openai_available(engine),
         },
         "claude_code": {"ready": cc_ready, "reason": cc_reason},
         "agent_tools": tool_names,

@@ -32,6 +32,7 @@ export interface AutomationStatus {
   timezone: string | null;
   local_model: string;
   claude: { model: string; key_set: boolean; available: boolean };
+  openai?: { model: string; key_set: boolean; available: boolean };
   claude_code: { ready: boolean; reason: string };
   agent_tools: string[];
 }

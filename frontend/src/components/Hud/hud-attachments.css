@@ -131,6 +131,59 @@
   user-select: text;
 }
 
+/* ---------- Question tabs (one per question) ---------- */
+.hud-tabs {
+  width: min(760px, 100%);
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--hud-cyan-dim) transparent;
+}
+.hud-tab {
+  flex: none;
+  display: flex;
+  align-items: center;
+  max-width: 220px;
+  background: rgba(2, 16, 22, 0.8);
+  border: 1px solid var(--hud-cyan-faint);
+  clip-path: polygon(8px 0, 100% 0, 100% 100%, 0 100%, 0 8px);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.hud-tab:hover { border-color: var(--hud-cyan-dim); }
+.hud-tab.is-active {
+  border-color: var(--hud-cyan);
+  box-shadow: inset 0 -2px 0 var(--hud-cyan), 0 0 12px rgba(0, 229, 255, 0.18);
+}
+.hud-tab__label {
+  min-width: 0;
+  padding: 5px 4px 5px 10px;
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--hud-muted);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hud-tab.is-active .hud-tab__label { color: var(--hud-text); }
+.hud-tab__x {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--hud-muted);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.hud-tab__x:hover { color: var(--hud-err); }
+
 @media (max-width: 860px) {
   .hud-attach-tray { position: static; order: -2; width: 100%; }
   .att-head-actions { flex-wrap: wrap; justify-content: flex-end; }

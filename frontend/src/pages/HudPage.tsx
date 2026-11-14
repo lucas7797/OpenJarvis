@@ -259,6 +259,30 @@ export function HudPage() {
 
   const model = hudModel === 'auto' ? 'auto' : hudModel || serverModel || models[0]?.id || '';
   const claudeReady = !!automations.status?.claude.available;
+  const gptReady = !!automations.status?.openai?.available;
+
+  // ---- Question tabs: every question opens its own tab ------------------
+  const [activeTab, setActiveTab] = useState<string | null>(null);
+  const tabs = useMemo(() => {
+    const list: { id: string; label: string; msgs: HudMessage[] }[] = [];
+    for (const m of messages) {
+      if (m.role === 'user') {
+        const label = m.content.length > 26 ? `${m.content.slice(0, 26)}…` : m.content;
+        list.push({ id: m.id, label, msgs: [m] });
+      } else if (list.length > 0) {
+        list[list.length - 1].msgs.push(m);
+      }
+    }
+    return list;
+  }, [messages]);
+  const currentTab = tabs.find((t) => t.id === activeTab) ?? tabs[tabs.length - 1];
+  const closeTab = (id: string) => {
+    const tab = tabs.find((t) => t.id === id);
+    if (!tab) return;
+    const drop = new Set(tab.msgs.map((m) => m.id));
+    setMessages((ms) => ms.filter((m) => !drop.has(m.id)));
+    if (activeTab === id) setActiveTab(null);
+  };
 
   const addLog = useCallback((text: string, level: LogLine['level'] = 'info') => {
     setLog((l) => [...l.slice(-60), { id: ++logSeq, time: stamp(), text, level }]);
@@ -477,6 +501,7 @@ export function HudPage() {
     const reply: HudMessage = { id: uid(), role: 'assistant', content: '' };
     const history = [...historyRef.current, userMsg];
     setMessages([...history, reply]);
+    setActiveTab(userMsg.id);
     setInput('');
     setPending([]);
     setPhase('thinking');
@@ -712,6 +737,9 @@ export function HudPage() {
             <span className="hud-sep" />
             <span className={`hud-dot ${claudeReady ? 'on' : 'off'}`} />
             <span>{claudeReady ? 'CLAUDE LINKED' : 'CLAUDE OFFLINE'}</span>
+            <span className="hud-sep" />
+            <span className={`hud-dot ${gptReady ? 'on' : 'off'}`} />
+            <span>{gptReady ? 'GPT LINKED' : 'GPT OFFLINE'}</span>
           </div>
           <button type="button" className="hud-btn hud-btn--ghost hud-routines-btn" onClick={() => setDeckOpen(true)}>
             ROUTINES
@@ -766,6 +794,35 @@ export function HudPage() {
 
         <main className="hud-center">
           <CoreReactor mode={mode} levelRef={levelRef} onActivate={activateCore} />
+          {tabs.length > 0 && (
+            <div className="hud-tabs" role="tablist" aria-label="Questions">
+              {tabs.map((t) => (
+                <div
+                  key={t.id}
+                  className={`hud-tab ${t.id === currentTab?.id ? 'is-active' : ''}`}
+                >
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={t.id === currentTab?.id}
+                    className="hud-tab__label"
+                    title={t.msgs[0]?.content}
+                    onClick={() => setActiveTab(t.id)}
+                  >
+                    {t.label}
+                  </button>
+                  <button
+                    type="button"
+                    className="hud-tab__x"
+                    aria-label={`Close ${t.label}`}
+                    onClick={() => closeTab(t.id)}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
           <div className="hud-transcript" ref={transcriptRef} aria-live="polite">
             {messages.length === 0 ? (
               <p className="hud-transcript__empty">
@@ -773,7 +830,7 @@ export function HudPage() {
                 {' '}All systems nominal. Tap the core to speak, or type a command below.
               </p>
             ) : (
-              messages.slice(-6).map((m) => (
+              (currentTab?.msgs ?? []).map((m) => (
                 <div key={m.id} className={`hud-msg hud-msg--${m.role}`}>
                   <span className="hud-msg__who">{m.role === 'user' ? 'YOU' : 'JARVIS'}</span>
                   <p>

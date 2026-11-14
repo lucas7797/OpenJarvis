@@ -61,6 +61,30 @@ def claude_available(engine: Any) -> bool:
     return claude_model() in models
 
 
+DEFAULT_OPENAI_MODEL = "gpt-5.4"
+
+_EXPLICIT_GPT = re.compile(
+    r"\b(ask|use|with|via|using|let)\s+(chat\s*gpt|gpt(-?\d[\w.]*)?|openai)\b"
+    r"|^\s*(chat\s*gpt|gpt)\b[\s,:]",
+    re.IGNORECASE,
+)
+
+
+def openai_model() -> str:
+    return os.environ.get("OPENJARVIS_OPENAI_MODEL", "").strip() or DEFAULT_OPENAI_MODEL
+
+
+def openai_available(engine: Any) -> bool:
+    """True when ChatGPT (OpenAI API) can serve requests on this server."""
+    if not os.environ.get("OPENAI_API_KEY"):
+        return False
+    try:
+        models = engine.list_models() if engine is not None else []
+    except Exception:
+        return False
+    return openai_model() in models
+
+
 def choose_model(
     query: str,
     tier: Optional[str],
@@ -68,23 +92,39 @@ def choose_model(
     local_model: str,
     engine: Any,
 ) -> RouteDecision:
-    """Pick the model for one request sent with ``model="auto"``."""
-    if claude_available(engine):
-        target = claude_model()
-        if _EXPLICIT_CLAUDE.search(query or ""):
-            return RouteDecision(target, "asked for Claude", True)
-        if _AUTOMATION_INTENT.search(query or ""):
-            return RouteDecision(target, "automation or coding task", True)
-        if tier in _CLAUDE_TIERS:
-            return RouteDecision(target, f"{tier.replace('_', ' ')} request", True)
+    """Pick the model for one request sent with ``model="auto"``.
+
+    Asking for ChatGPT / GPT or Claude by name goes to that model when it is
+    configured. Otherwise hard work (automations, coding, complex requests)
+    goes to Claude, or to ChatGPT when only an OpenAI key is set.
+    """
+    text = query or ""
+    if _EXPLICIT_GPT.search(text) and openai_available(engine):
+        return RouteDecision(openai_model(), "asked for ChatGPT", False)
+    has_claude = claude_available(engine)
+    if _EXPLICIT_CLAUDE.search(text) and has_claude:
+        return RouteDecision(claude_model(), "asked for Claude", True)
+    hard = None
+    if _AUTOMATION_INTENT.search(text):
+        hard = "automation or coding task"
+    elif tier in _CLAUDE_TIERS:
+        hard = f"{tier.replace('_', ' ')} request"
+    if hard:
+        if has_claude:
+            return RouteDecision(claude_model(), hard, True)
+        if openai_available(engine):
+            return RouteDecision(openai_model(), f"{hard} (ChatGPT)", False)
     return RouteDecision(local_model, "everyday request (local)", False)
 
 
 __all__ = [
     "AUTO_MODEL",
     "DEFAULT_CLAUDE_MODEL",
+    "DEFAULT_OPENAI_MODEL",
     "RouteDecision",
     "choose_model",
     "claude_available",
     "claude_model",
+    "openai_available",
+    "openai_model",
 ]
