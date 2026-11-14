@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import ctypes
 import logging
 import os
+import sys
 import tempfile
 from typing import List, Optional
 
@@ -22,6 +24,36 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+# CTranslate2 links these lazily: a GPU without them loads the model fine and
+# then fails (or stalls) on the first transcription.
+_CUBLAS_LIBRARY = "cublas64_12.dll" if sys.platform == "win32" else "libcublas.so.12"
+_CUDA_ERROR_MARKERS = ("cublas", "cudnn", "cuda")
+
+
+def _cuda_runtime_usable() -> bool:
+    """True when a CUDA device exists and the cuBLAS runtime can be loaded."""
+    if ctranslate2 is None:
+        return False
+    try:
+        if ctranslate2.get_cuda_device_count() < 1:
+            return False
+    except Exception:
+        return False
+    try:
+        ctypes.CDLL(_CUBLAS_LIBRARY)
+    except OSError:
+        logger.info(
+            "CUDA device found but %s is not loadable; Whisper will use the CPU",
+            _CUBLAS_LIBRARY,
+        )
+        return False
+    return True
+
+
+def _is_cuda_error(exc: Exception) -> bool:
+    message = str(exc).lower()
+    return any(marker in message for marker in _CUDA_ERROR_MARKERS)
+
 
 @SpeechRegistry.register("faster-whisper")
 class FasterWhisperBackend(SpeechBackend):
@@ -34,24 +66,34 @@ class FasterWhisperBackend(SpeechBackend):
         model_size: str = "base",
         device: str = "auto",
         compute_type: str = "float16",
+        language: str = "",
     ) -> None:
         self._model_size = model_size
+        # Default spoken language; empty means detect it per request (slower).
+        self._language = language
         self._device = device
         self._compute_type = compute_type
         self._model: Optional[WhisperModel] = None
+        self._model_device: Optional[str] = None
         self._last_error: Optional[str] = None
 
-    def _resolve_compute_type(self) -> str:
-        """Pick a CTranslate2 compute type supported by the configured device."""
+    def _resolve_device(self) -> str:
+        """Turn ``auto`` into a device that can actually run the model."""
+        if self._device != "auto":
+            return self._device
+        return "cuda" if _cuda_runtime_usable() else "cpu"
+
+    def _resolve_compute_type(self, device: str) -> str:
+        """Pick a CTranslate2 compute type supported by *device*."""
         if ctranslate2 is None:
             return self._compute_type
 
         try:
-            supported = set(ctranslate2.get_supported_compute_types(self._device))
+            supported = set(ctranslate2.get_supported_compute_types(device))
         except Exception as exc:
             logger.debug(
                 "Could not inspect CTranslate2 compute types for %s: %s",
-                self._device,
+                device,
                 exc,
             )
             return self._compute_type
@@ -72,28 +114,33 @@ class FasterWhisperBackend(SpeechBackend):
             "CTranslate2 compute_type=%r is not supported on device=%r; "
             "using %r instead",
             self._compute_type,
-            self._device,
+            device,
             fallback,
         )
         return fallback
 
-    def _ensure_model(self) -> WhisperModel:
-        """Lazy-load the Whisper model on first use."""
-        if self._model is None:
+    def _ensure_model(self, device: Optional[str] = None) -> WhisperModel:
+        """Lazy-load the Whisper model on first use (or on *device*)."""
+        if self._model is None or (device and device != self._model_device):
             if WhisperModel is None:
                 self._last_error = (
                     "faster-whisper is not installed. "
                     "Install with: uv sync --extra desktop"
                 )
                 raise ImportError(self._last_error)
-            compute_type = self._resolve_compute_type()
+            target = device or self._resolve_device()
             self._model = WhisperModel(
                 self._model_size,
-                device=self._device,
-                compute_type=compute_type,
+                device=target,
+                compute_type=self._resolve_compute_type(target),
             )
+            self._model_device = target
         self._last_error = None
         return self._model
+
+    def _run(self, model: WhisperModel, path: str, kwargs: dict):
+        segments_iter, info = model.transcribe(path, **kwargs)
+        return list(segments_iter), info
 
     def transcribe(
         self,
@@ -117,11 +164,19 @@ class FasterWhisperBackend(SpeechBackend):
                     tmp.write(audio)
 
                 kwargs = {}
-                if language:
-                    kwargs["language"] = language
+                if language or self._language:
+                    kwargs["language"] = language or self._language
 
-                segments_iter, info = model.transcribe(tmp.name, **kwargs)
-                segments_list = list(segments_iter)
+                try:
+                    segments_list, info = self._run(model, tmp.name, kwargs)
+                except RuntimeError as exc:
+                    if self._model_device != "cuda" or not _is_cuda_error(exc):
+                        raise
+                    logger.warning(
+                        "Whisper failed on the GPU (%s); switching to the CPU", exc
+                    )
+                    cpu_model = self._ensure_model(device="cpu")
+                    segments_list, info = self._run(cpu_model, tmp.name, kwargs)
             finally:
                 try:
                     os.unlink(tmp.name)

@@ -52,7 +52,61 @@ export function shouldAutoplayFinishedReply(
     && lastMessage.id !== autoSpokenId;
 }
 
-function teardown(): void {
+/** First piece is kept short so audio starts fast; later ones can be longer. */
+const FIRST_PIECE_MAX = 140;
+const PIECE_MAX = 260;
+
+/** Break one sentence that is too long for a single piece at commas, then spaces. */
+function splitLong(sentence: string, max: number): string[] {
+  if (sentence.length <= max) return [sentence];
+  const out: string[] = [];
+  let rest = sentence;
+  while (rest.length > max) {
+    const window = rest.slice(0, max);
+    let cut = Math.max(window.lastIndexOf(', '), window.lastIndexOf('; '));
+    cut = cut > max / 3 ? cut + 1 : window.lastIndexOf(' ');
+    if (cut <= 0) cut = max;
+    out.push(rest.slice(0, cut).trim());
+    rest = rest.slice(cut).trim();
+  }
+  if (rest) out.push(rest);
+  return out;
+}
+
+/**
+ * Split speakable text into pieces for sentence-by-sentence synthesis.
+ *
+ * The first piece is the first sentence (so the voice starts after one short
+ * synthesis instead of the whole reply); later sentences are grouped up to
+ * PIECE_MAX characters to keep the number of requests low.
+ */
+export function splitForSpeech(text: string): string[] {
+  const sentences = (text.match(/[^.!?…\n]+(?:[.!?…]+["')\]]*|\n+|$)/g) ?? [])
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const pieces: string[] = [];
+  let current = '';
+  for (const sentence of sentences) {
+    const max = pieces.length === 0 && !current ? FIRST_PIECE_MAX : PIECE_MAX;
+    for (const part of splitLong(sentence, max)) {
+      if (pieces.length === 0 && !current) {
+        pieces.push(part);
+        continue;
+      }
+      if (current && current.length + 1 + part.length > PIECE_MAX) {
+        pieces.push(current);
+        current = part;
+      } else {
+        current = current ? `${current} ${part}` : part;
+      }
+    }
+  }
+  if (current) pieces.push(current);
+  return pieces;
+}
+
+/** Stop and free the audio element that is playing, if any. */
+function releaseAudio(): void {
   if (audio) {
     // Detach first: clearing src re-runs the media load algorithm, which fails
     // on an empty source and dispatches an `error` event. With the handler
@@ -68,6 +122,10 @@ function teardown(): void {
     URL.revokeObjectURL(objectUrl);
     objectUrl = null;
   }
+}
+
+function teardown(): void {
+  releaseAudio();
   if (controller) {
     controller.abort();
     controller = null;
@@ -112,29 +170,22 @@ export const useTtsStore = create<TtsStore>((set, get) => ({
     const ac = new AbortController();
     controller = ac;
 
-    try {
-      const blob = await synthesizeSpeech(trimmed, { signal: ac.signal });
-      if (mine !== token) return;
+    // Speak sentence by sentence: synthesize piece i+1 while piece i plays,
+    // so the voice starts after the first sentence instead of the whole reply.
+    const pieces = splitForSpeech(trimmed);
+    const requests = new Map<number, Promise<Blob>>();
+    const fetchPiece = (i: number): Promise<Blob> => {
+      let req = requests.get(i);
+      if (!req) {
+        req = synthesizeSpeech(pieces[i], { signal: ac.signal });
+        // Failures are reported when the piece is played, not here.
+        req.catch(() => undefined);
+        requests.set(i, req);
+      }
+      return req;
+    };
 
-      const url = URL.createObjectURL(blob);
-      objectUrl = url;
-      const el = new Audio(url);
-      audio = el;
-
-      el.onended = () => {
-        if (mine !== token) return;
-        teardown();
-        set({ state: 'idle', speakingId: null });
-      };
-      el.onerror = () => {
-        if (mine !== token) return;
-        teardown();
-        set({ state: 'idle', speakingId: null, error: 'Playback failed', errorId: id });
-      };
-
-      await el.play();
-      if (mine === token) set({ state: 'speaking', speakingId: id });
-    } catch (err) {
+    const fail = (err: unknown) => {
       if (mine !== token) return;
       if (err instanceof DOMException && err.name === 'AbortError') return;
       teardown();
@@ -144,7 +195,43 @@ export const useTtsStore = create<TtsStore>((set, get) => ({
         error: err instanceof Error ? err.message : 'Speech synthesis failed',
         errorId: id,
       });
-    }
+    };
+
+    const playPiece = async (i: number): Promise<void> => {
+      try {
+        const blob = await fetchPiece(i);
+        if (mine !== token) return;
+        if (i + 1 < pieces.length) void fetchPiece(i + 1);
+
+        releaseAudio();
+        const url = URL.createObjectURL(blob);
+        objectUrl = url;
+        const el = new Audio(url);
+        audio = el;
+
+        el.onended = () => {
+          if (mine !== token) return;
+          if (i + 1 < pieces.length) {
+            void playPiece(i + 1);
+            return;
+          }
+          teardown();
+          set({ state: 'idle', speakingId: null });
+        };
+        el.onerror = () => {
+          if (mine !== token) return;
+          teardown();
+          set({ state: 'idle', speakingId: null, error: 'Playback failed', errorId: id });
+        };
+
+        await el.play();
+        if (mine === token) set({ state: 'speaking', speakingId: id });
+      } catch (err) {
+        fail(err);
+      }
+    };
+
+    await playPiece(0);
   },
 
   stop: () => {

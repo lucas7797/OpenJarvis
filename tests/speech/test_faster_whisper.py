@@ -173,6 +173,75 @@ def test_faster_whisper_health_captures_load_error():
         assert "missing cublas64_12.dll" in (backend.last_error() or "")
 
 
+def _cpu_and_cuda_types():
+    def supported(device):
+        return {"int8", "float32"} if device == "cpu" else {"float16", "int8"}
+
+    return MagicMock(get_supported_compute_types=MagicMock(side_effect=supported))
+
+
+def test_auto_device_uses_cpu_when_cuda_runtime_is_missing():
+    """A GPU without the CUDA libraries must not be picked: it fails or hangs."""
+    with (
+        patch("openjarvis.speech.faster_whisper.WhisperModel") as mock_whisper,
+        patch("openjarvis.speech.faster_whisper.ctranslate2", _cpu_and_cuda_types()),
+        patch(
+            "openjarvis.speech.faster_whisper._cuda_runtime_usable",
+            return_value=False,
+        ),
+    ):
+        FasterWhisperBackend(model_size="base", device="auto")._ensure_model()
+
+    mock_whisper.assert_called_once_with("base", device="cpu", compute_type="int8")
+
+
+def test_auto_device_uses_cuda_when_runtime_is_usable():
+    with (
+        patch("openjarvis.speech.faster_whisper.WhisperModel") as mock_whisper,
+        patch("openjarvis.speech.faster_whisper.ctranslate2", _cpu_and_cuda_types()),
+        patch(
+            "openjarvis.speech.faster_whisper._cuda_runtime_usable",
+            return_value=True,
+        ),
+    ):
+        FasterWhisperBackend(model_size="base", device="auto")._ensure_model()
+
+    mock_whisper.assert_called_once_with("base", device="cuda", compute_type="float16")
+
+
+def test_cuda_failure_during_transcribe_falls_back_to_cpu():
+    """cuBLAS/cuDNN errors surface on first use; retry once on the CPU."""
+    info = MagicMock(language="en", language_probability=0.9, duration=1.0)
+    segment = MagicMock(text=" Hello", start=0.0, end=1.0)
+    gpu_model = MagicMock()
+    gpu_model.transcribe.side_effect = RuntimeError(
+        "Library cublas64_12.dll is not found or cannot be loaded"
+    )
+    cpu_model = MagicMock()
+    cpu_model.transcribe.return_value = ([segment], info)
+
+    with (
+        patch(
+            "openjarvis.speech.faster_whisper.WhisperModel",
+            side_effect=[gpu_model, cpu_model],
+        ) as mock_whisper,
+        patch("openjarvis.speech.faster_whisper.ctranslate2", _cpu_and_cuda_types()),
+    ):
+        backend = FasterWhisperBackend(model_size="base", device="cuda")
+        result = backend.transcribe(b"audio")
+        again = backend.transcribe(b"audio")
+
+    assert result.text == "Hello"
+    assert again.text == "Hello"
+    assert mock_whisper.call_args_list[1].kwargs == {
+        "device": "cpu",
+        "compute_type": "int8",
+    }
+    # The CPU model is kept: no GPU retry on every request.
+    assert mock_whisper.call_count == 2
+    assert backend.last_error() is None
+
+
 def test_faster_whisper_supported_formats():
     """Backend supports standard audio formats."""
     with patch("openjarvis.speech.faster_whisper.WhisperModel"):
@@ -183,3 +252,18 @@ def test_faster_whisper_supported_formats():
         assert "wav" in formats
         assert "mp3" in formats
         assert "webm" in formats
+
+
+def test_configured_language_skips_detection_unless_request_overrides():
+    """A default language saves Whisper's detection pass on every command."""
+    info = MagicMock(language="en", language_probability=1.0, duration=1.0)
+    model = MagicMock()
+    model.transcribe.return_value = ([], info)
+
+    with patch("openjarvis.speech.faster_whisper.WhisperModel", return_value=model):
+        backend = FasterWhisperBackend(model_size="base", device="cpu", language="en")
+        backend.transcribe(b"audio")
+        backend.transcribe(b"audio", language="de")
+
+    assert model.transcribe.call_args_list[0].kwargs["language"] == "en"
+    assert model.transcribe.call_args_list[1].kwargs["language"] == "de"

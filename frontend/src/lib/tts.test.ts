@@ -6,7 +6,12 @@ vi.mock('./api', () => ({
 }));
 
 import { synthesizeSpeech, fetchTtsHealth } from './api';
-import { useTtsStore, __resetTtsForTests, shouldAutoplayFinishedReply } from './tts';
+import {
+  useTtsStore,
+  __resetTtsForTests,
+  shouldAutoplayFinishedReply,
+  splitForSpeech,
+} from './tts';
 
 const synth = vi.mocked(synthesizeSpeech);
 const health = vi.mocked(fetchTtsHealth);
@@ -212,6 +217,83 @@ describe('shared voice output', () => {
 
     expect(health).toHaveBeenCalledTimes(2);
     expect(useTtsStore.getState().available).toBe(true);
+  });
+});
+
+/** Let queued promise callbacks (synthesis -> play) run. */
+const flush = () => new Promise((r) => setTimeout(r, 0));
+
+describe('splitForSpeech', () => {
+  it('keeps a short reply in one piece', () => {
+    expect(splitForSpeech('Opening YouTube now.')).toEqual(['Opening YouTube now.']);
+  });
+
+  it('starts with the first sentence so audio begins quickly', () => {
+    const pieces = splitForSpeech(
+      'Morning is great for a walk. The air is cooler and it sets your body clock. ' +
+        'Evening works too if mornings are rushed. Either way, ten minutes helps.',
+    );
+    expect(pieces[0]).toBe('Morning is great for a walk.');
+    expect(pieces.join(' ')).toBe(
+      'Morning is great for a walk. The air is cooler and it sets your body clock. ' +
+        'Evening works too if mornings are rushed. Either way, ten minutes helps.',
+    );
+  });
+
+  it('breaks an overlong sentence at a comma or space', () => {
+    const long = `${'word, '.repeat(60)}end.`;
+    const pieces = splitForSpeech(long);
+    expect(pieces.length).toBeGreaterThan(1);
+    pieces.forEach((p) => expect(p.length).toBeLessThanOrEqual(260));
+    expect(pieces.join(' ').replace(/\s+/g, ' ')).toBe(long.trim().replace(/\s+/g, ' '));
+  });
+});
+
+describe('sentence-by-sentence playback', () => {
+  const reply = 'First sentence here. Second sentence follows. Third one ends it.';
+
+  it('plays the first piece before the rest is synthesized and prefetches the next', async () => {
+    synth.mockResolvedValue(new Blob(['wav']));
+
+    await useTtsStore.getState().speak('m1', reply);
+    const pieces = splitForSpeech(reply);
+    expect(pieces.length).toBeGreaterThan(1);
+
+    expect(FakeAudio.instances).toHaveLength(1);
+    expect(synth.mock.calls[0][0]).toBe(pieces[0]);
+    // The second piece is already on its way while the first is playing.
+    expect(synth.mock.calls.map((c) => c[0])).toContain(pieces[1]);
+    expect(useTtsStore.getState().state).toBe('speaking');
+  });
+
+  it('plays every piece in order, then goes idle and frees all audio', async () => {
+    synth.mockImplementation((text: string) => Promise.resolve(new Blob([text])));
+
+    await useTtsStore.getState().speak('m1', reply);
+    const pieces = splitForSpeech(reply);
+    for (let i = 0; i < pieces.length; i++) {
+      expect(FakeAudio.instances).toHaveLength(i + 1);
+      expect(useTtsStore.getState().state).toBe('speaking');
+      FakeAudio.instances[i].onended?.();
+      await flush();
+    }
+
+    expect(FakeAudio.instances).toHaveLength(pieces.length);
+    expect(useTtsStore.getState().state).toBe('idle');
+    expect(useTtsStore.getState().speakingId).toBeNull();
+    expect(revoked.sort()).toEqual([...created].sort());
+  });
+
+  it('stop() between pieces keeps the rest silent', async () => {
+    synth.mockResolvedValue(new Blob(['wav']));
+
+    await useTtsStore.getState().speak('m1', reply);
+    useTtsStore.getState().stop();
+    FakeAudio.instances[0].onended?.();
+    await flush();
+
+    expect(FakeAudio.instances).toHaveLength(1);
+    expect(useTtsStore.getState().state).toBe('idle');
   });
 });
 

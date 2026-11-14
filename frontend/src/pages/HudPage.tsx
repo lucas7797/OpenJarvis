@@ -171,6 +171,12 @@ function Typewriter({ text, onTick }: { text: string; onTick?: () => void }) {
   );
 }
 
+// Voice commands are answered out loud, so a long markdown answer means a long
+// wait (synthesis) and a long listen. Ask for a short spoken reply instead.
+const SPOKEN_REPLY_RULE =
+  ' This message was spoken and your reply will be read aloud: answer in one to three short, ' +
+  'natural sentences with no lists, headings or markdown, unless the user asks for detail.';
+
 export function HudPage() {
   const navigate = useNavigate();
   const models = useAppStore((s) => s.models);
@@ -483,7 +489,7 @@ export function HudPage() {
     },
   };
 
-  const send = useCallback(async (raw: string) => {
+  const send = useCallback(async (raw: string, opts: { spoken?: boolean } = {}) => {
     const attached = pending;
     const text = raw.trim() || (attached.length ? 'Please look at the attached file(s).' : '');
     if (!text || abortRef.current) return;
@@ -532,7 +538,8 @@ export function HudPage() {
                 'You have long-term memory: facts the user shares are saved automatically and remembered in future sessions, ' +
                 'so when asked to remember something, confirm that you will (never claim you cannot remember). ' +
                 'Files and images the user attaches are added to their message (images as a description); ' +
-                'earlier attachments can be found with list_attachments, read with read_attachment and kept long-term with save_attachment_to_knowledge.',
+                'earlier attachments can be found with list_attachments, read with read_attachment and kept long-term with save_attachment_to_knowledge.' +
+                (opts.spoken ? SPOKEN_REPLY_RULE : ''),
             },
             ...history.slice(-12).map((m) => ({ role: m.role, content: m.content })),
           ],
@@ -645,7 +652,7 @@ export function HudPage() {
           setPhase('idle');
           if (heard) {
             addLog(`Heard: "${heard.slice(0, 40)}"`, 'ok');
-            void send(heard);
+            void send(heard, { spoken: true });
           } else {
             addLog('No speech detected', 'warn');
           }

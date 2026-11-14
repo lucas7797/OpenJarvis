@@ -83,6 +83,23 @@ def _default_num_ctx() -> int:
         return 16384
 
 
+def _keep_alive() -> str | None:
+    """How long Ollama keeps the model loaded after a request.
+
+    Set ``JARVIS_OLLAMA_KEEP_ALIVE`` (e.g. ``30m``, ``2h``, ``-1`` for forever)
+    to skip the multi-second reload Ollama does after its 5-minute default.
+    Unset means Ollama's own default.
+    """
+    value = os.environ.get("JARVIS_OLLAMA_KEEP_ALIVE", "").strip()
+    return value or None
+
+
+def _apply_keep_alive(payload: Dict[str, Any]) -> None:
+    keep_alive = _keep_alive()
+    if keep_alive is not None:
+        payload["keep_alive"] = keep_alive
+
+
 def _ollama_request_options(
     *,
     temperature: float,
@@ -175,6 +192,7 @@ class OllamaEngine(AsyncHTTPEngineMixin, InferenceEngine):
             payload["think"] = False
         elif kwargs["think"] is not None:
             payload["think"] = kwargs["think"]
+        _apply_keep_alive(payload)
         # Pass tools if provided
         tools = kwargs.get("tools")
         if tools:
@@ -298,6 +316,7 @@ class OllamaEngine(AsyncHTTPEngineMixin, InferenceEngine):
             payload["think"] = False
         elif kwargs["think"] is not None:
             payload["think"] = kwargs["think"]
+        _apply_keep_alive(payload)
         try:
             # ASYNC streaming: ``httpx.AsyncClient`` + ``aiter_lines`` never
             # blocks the event loop between tokens (the previous SYNC
@@ -393,6 +412,7 @@ class OllamaEngine(AsyncHTTPEngineMixin, InferenceEngine):
             payload["think"] = False
         elif kwargs["think"] is not None:
             payload["think"] = kwargs["think"]
+        _apply_keep_alive(payload)
 
         tools = kwargs.get("tools")
         if tools:
