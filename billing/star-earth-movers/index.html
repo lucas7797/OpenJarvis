@@ -6,11 +6,6 @@
 <title>Star Earth Movers Billing</title>
 <style>
   :root {
-    --paper: #f9c6d3;
-    --paper-edge: #f3b3c4;
-    --ink: #3b2a6b;
-    --ink-soft: #5a4a8c;
-    --hand: #1f2a55;
     --bg: #2b2734;
     --panel: #ffffff;
     --text: #222;
@@ -18,101 +13,130 @@
     --accent: #3b2a6b;
     --danger: #b3261e;
     --ok: #1e7b3a;
+    --star: #f5a623;
   }
   * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    font-family: Arial, Helvetica, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-  }
+  body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: var(--bg); color: var(--text); }
+
+  /* ---------- Toolbar ---------- */
   .toolbar {
     position: sticky; top: 0; z-index: 10;
     display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
-    padding: 10px 16px;
-    background: #1d1a24; color: #fff;
+    padding: 10px 16px; background: #1d1a24; color: #fff;
   }
-  .toolbar h1 { font-size: 16px; margin: 0 12px 0 0; font-weight: 600; }
+  .toolbar h1 { font-size: 16px; margin: 0 8px 0 0; font-weight: 600; }
   .toolbar .spacer { flex: 1; }
+  .actions { display: flex; flex-wrap: wrap; gap: 6px; }
   button, .btn {
-    font: inherit; font-size: 14px;
-    padding: 8px 14px; border-radius: 6px; border: 1px solid transparent;
-    background: #fff; color: var(--accent); cursor: pointer;
+    font: inherit; font-size: 14px; padding: 8px 14px; border-radius: 6px;
+    border: 1px solid transparent; background: #fff; color: var(--accent); cursor: pointer;
   }
+  button:disabled { opacity: .5; cursor: wait; }
   button.primary { background: #7b5cff; color: #fff; }
   button.danger { background: var(--danger); color: #fff; }
   button.ghost { background: transparent; color: #fff; border-color: #ffffff55; }
   button.tab.active { background: #7b5cff; color: #fff; }
-  .wrap { max-width: 760px; margin: 0 auto; padding: 20px 16px 60px; }
-  .status { min-height: 20px; color: #cfe; font-size: 13px; margin-bottom: 8px; }
+  .wrap { max-width: 780px; margin: 0 auto; padding: 20px 16px 60px; }
+  .status { min-height: 20px; font-size: 13px; margin-bottom: 8px; }
 
-  /* ---------- Bill slip ---------- */
+  /* ---------- Bill slip (template driven) ---------- */
   .slip {
-    background: var(--paper);
-    padding: 18px;
-    border-radius: 2px;
-    box-shadow: 0 6px 24px #0007;
-    color: var(--ink);
+    --paper: #f9c6d3; --ink: #3b2a6b; --hand: #1f2a55; --head-text: var(--ink);
+    --brand-font: "Times New Roman", Georgia, serif;
+    --body-font: Arial, Helvetica, sans-serif;
+    --hand-font: "Segoe Print", "Comic Sans MS", "Bradley Hand", cursive;
+    background: var(--paper); color: var(--ink);
+    font-family: var(--body-font);
+    padding: 18px; border-radius: 2px; box-shadow: 0 6px 24px #0007;
+    width: 100%;
   }
   .frame { border: 2px solid var(--ink); }
   .head {
-    position: relative;
-    display: grid; grid-template-columns: 110px 1fr 190px; align-items: center;
-    padding: 10px 12px; border-bottom: 2px solid var(--ink);
-    min-height: 150px;
+    display: grid; grid-template-columns: 130px 1fr 190px; align-items: center; gap: 6px;
+    padding: 10px 12px; border-bottom: 2px solid var(--ink); min-height: 150px;
+    color: var(--head-text);
   }
-  .head svg { width: 100%; height: auto; }
-  .brand { text-align: center; font-family: "Times New Roman", Georgia, serif; font-weight: 700; }
-  .brand .t1 { font-size: 44px; letter-spacing: 1px; }
-  .brand .t2 { font-size: 34px; letter-spacing: 1px; }
+  .logo { color: var(--head-text); }
+  .logo svg { width: 100%; height: auto; display: block; }
+  .brand { text-align: center; font-family: var(--brand-font); font-weight: 700; }
+  .brand .t1 { font-size: 44px; letter-spacing: 1px; line-height: 1.1; }
+  .brand .t2 { font-size: 34px; letter-spacing: 1px; line-height: 1.15; }
   .brand .sym { font-size: 16px; }
   .owner { text-align: right; font-weight: 700; font-size: 17px; line-height: 1.5; }
   .owner .name { font-size: 22px; }
 
   [contenteditable] { outline: none; border-radius: 3px; }
   [contenteditable]:hover { background: #ffffff55; }
-  [contenteditable]:focus { background: #ffffff99; box-shadow: 0 0 0 1px var(--ink-soft); }
+  [contenteditable]:focus { background: #ffffff99; box-shadow: 0 0 0 1px var(--ink); color: var(--ink); }
 
   .meta { padding: 12px 14px 10px; border-bottom: 2px solid var(--ink); }
   .row { display: flex; align-items: baseline; gap: 8px; margin: 6px 0; }
   .row label { font-size: 17px; white-space: nowrap; }
   .between { justify-content: space-between; flex-wrap: wrap; }
 
-  input.line, textarea.line {
-    flex: 1; min-width: 0;
-    font-family: "Segoe Print", "Comic Sans MS", "Bradley Hand", cursive;
-    font-size: 19px; color: var(--hand);
-    background: transparent; border: none;
-    border-bottom: 2px dotted var(--ink);
-    padding: 2px 4px;
+  .line {
+    flex: 1; min-width: 0; display: block;
+    font-family: var(--hand-font); font-size: 19px; color: var(--hand);
+    background: transparent; border: none; border-bottom: 2px dotted var(--ink);
+    padding: 2px 4px; min-height: 31px; line-height: 1.4;
   }
-  input.line:focus, textarea.line:focus { outline: none; background: #ffffff77; }
-  textarea.line { resize: none; height: 32px; width: 100%; }
-  #billNo { max-width: 120px; border-bottom-style: none; font-size: 24px; }
-  #billDate { max-width: 200px; }
+  input.line:focus { outline: none; background: #ffffff77; }
+  .billno { max-width: 120px; border-bottom-style: none !important; font-size: 24px; }
+  .billdate { max-width: 200px; }
 
   .body { padding: 30px 40px 20px; }
   .field { display: grid; grid-template-columns: 170px 14px 1fr 34px; align-items: baseline; margin: 18px 0; }
-  .field label { font-size: 18px; }
-  .field .colon { font-size: 18px; }
-  .field .auto {
-    font-size: 11px; color: var(--ink-soft); background: none; border: none;
-    padding: 0 0 0 6px; cursor: pointer; visibility: hidden;
-  }
+  .field label, .field .colon { font-size: 18px; }
+  .field .auto { font-size: 12px; color: var(--ink); background: none; border: none; padding: 0 0 0 6px; cursor: pointer; visibility: hidden; }
   .field.manual .auto { visibility: visible; }
-  .field.computed input.line { border-bottom-style: dashed; }
+  .field.computed .line { border-bottom-style: dashed; }
 
   .sign { display: flex; justify-content: space-between; padding: 40px 40px 14px; font-size: 18px; }
-  .sign div { text-align: center; }
-  .sign input.line { display: block; width: 180px; margin-bottom: 4px; text-align: center; }
+  .sign > div { text-align: center; }
+  .sign .line { width: 180px; margin-bottom: 4px; text-align: center; }
+
+  /* Layout: banner */
+  .slip.layout-banner { --head-text: #fff; }
+  .slip.layout-banner .head { background: var(--ink); }
+  .slip.layout-banner [contenteditable]:hover { background: #ffffff22; }
+  /* Layout: boxed */
+  .slip.layout-boxed .body { padding: 24px 30px; }
+  .slip.layout-boxed .field { margin: 0; padding: 8px 10px; border: 1.5px solid var(--ink); border-top: none; align-items: center; }
+  .slip.layout-boxed .field:first-child { border-top: 1.5px solid var(--ink); }
+  .slip.layout-boxed .field:nth-child(even) { background: #00000008; }
+  .slip.layout-boxed .field .line { border-bottom: none; }
+  .slip.layout-boxed .field label { font-weight: 700; }
+  /* Layout: minimal */
+  .slip.layout-minimal .frame { border: none; }
+  .slip.layout-minimal .head { border-bottom: 3px solid var(--ink); }
+  .slip.layout-minimal .meta { border-bottom: 1px solid var(--ink); }
+  .slip.layout-minimal .line { border-bottom: 1px solid #0003; }
+  .slip.layout-minimal .brand .t1, .slip.layout-minimal .brand .t2 { letter-spacing: 4px; }
+  /* Layout: receipt */
+  .slip.layout-receipt { max-width: 440px; margin: 0 auto; }
+  .slip.layout-receipt .frame { border: 2px dashed var(--ink); }
+  .slip.layout-receipt .head { grid-template-columns: 1fr; text-align: center; border-bottom: 2px dashed var(--ink); }
+  .slip.layout-receipt .logo { width: 110px; margin: 0 auto; }
+  .slip.layout-receipt .owner { text-align: center; }
+  .slip.layout-receipt .brand .t1 { font-size: 34px; } .slip.layout-receipt .brand .t2 { font-size: 24px; }
+  .slip.layout-receipt .meta { border-bottom: 2px dashed var(--ink); }
+  .slip.layout-receipt .body { padding: 14px 16px; }
+  .slip.layout-receipt .field { grid-template-columns: 130px 12px 1fr 24px; margin: 10px 0; }
+  .slip.layout-receipt .field label, .slip.layout-receipt .row label { font-size: 15px; }
+  .slip.layout-receipt .sign { padding: 30px 12px 12px; font-size: 14px; }
+  .slip.layout-receipt .sign .line { width: 140px; }
 
   .hint { color: #ddd; font-size: 12px; margin-top: 10px; line-height: 1.5; }
 
-  /* ---------- Register ---------- */
-  .panel { background: var(--panel); border-radius: 8px; padding: 16px; }
+  /* ---------- Panels ---------- */
+  .panel { background: var(--panel); border-radius: 8px; padding: 16px; margin-top: 16px; }
+  .panel:first-child { margin-top: 0; }
   .panel h2 { margin: 0 0 12px; font-size: 18px; color: var(--accent); }
-  .filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-  .filters input { padding: 8px; border: 1px solid #ccc; border-radius: 6px; font: inherit; flex: 1; min-width: 140px; }
+  .filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; align-items: center; }
+  .filters input, .filters select, .panel textarea, .settings input {
+    padding: 8px; border: 1px solid #ccc; border-radius: 6px; font: inherit; flex: 1; min-width: 140px;
+  }
+  .panel textarea { width: 100%; min-height: 70px; resize: vertical; }
   .table-wrap { overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; font-size: 14px; }
   th, td { padding: 8px 6px; border-bottom: 1px solid #eee; text-align: left; white-space: nowrap; }
@@ -125,29 +149,59 @@
   .pill { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; }
   .pill.due { background: #fde7e7; color: var(--danger); }
   .pill.paid { background: #e3f6e9; color: var(--ok); }
-
   .settings label { display: block; margin: 10px 0 4px; font-size: 13px; color: var(--muted); }
-  .settings input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font: inherit; }
+  .settings input { width: 100%; }
+
+  /* ---------- Stars / reviews ---------- */
+  .stars { display: inline-flex; gap: 2px; }
+  .stars button { background: none; border: none; padding: 0 2px; font-size: 28px; line-height: 1; color: #ccc; cursor: pointer; }
+  .stars button.on { color: var(--star); }
+  .stars.small { font-size: 16px; color: var(--star); letter-spacing: 1px; }
+  .review-summary { display: flex; gap: 24px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+  .review-avg { text-align: center; min-width: 110px; }
+  .review-avg .big { font-size: 42px; font-weight: 700; color: var(--accent); }
+  .bars { flex: 1; min-width: 200px; }
+  .bar { display: grid; grid-template-columns: 30px 1fr 30px; gap: 8px; align-items: center; font-size: 13px; margin: 3px 0; }
+  .bar .track { height: 8px; background: #eee; border-radius: 4px; overflow: hidden; }
+  .bar .fill { height: 100%; background: var(--star); }
+  .review-item { border-top: 1px solid #eee; padding: 12px 0; }
+  .review-item .top { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+  .review-item .who { font-weight: 700; color: var(--accent); }
+  .review-item .when { font-size: 12px; color: var(--muted); }
+  .review-item p { margin: 6px 0 0; white-space: pre-wrap; }
+
+  /* ---------- Templates ---------- */
+  .tpl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; }
+  .tpl-card { border: 2px solid #ddd; border-radius: 8px; padding: 8px; cursor: pointer; background: #fafafa; text-align: left; color: var(--text); }
+  .tpl-card.active { border-color: #7b5cff; box-shadow: 0 0 0 3px #7b5cff33; }
+  .tpl-card .thumb { position: relative; overflow: hidden; border-radius: 4px; background: #eee; }
+  .tpl-card .thumb > .slip { position: absolute; top: 0; left: 0; width: 760px; transform-origin: top left; box-shadow: none; pointer-events: none; }
+  .tpl-card .name { font-size: 14px; font-weight: 700; margin-top: 8px; }
+  .tpl-card .sub { font-size: 12px; color: var(--muted); }
 
   .hidden { display: none !important; }
+  #exportStage { position: fixed; left: -12000px; top: 0; width: 760px; }
 
   @media (max-width: 640px) {
-    .head { grid-template-columns: 70px 1fr; }
+    .head { grid-template-columns: 80px 1fr; }
     .owner { grid-column: 1 / -1; text-align: center; font-size: 15px; }
     .owner .name { font-size: 18px; }
     .brand .t1 { font-size: 32px; } .brand .t2 { font-size: 22px; }
     .body { padding: 16px 10px; }
     .field { grid-template-columns: 120px 10px 1fr 28px; }
-    .field label, .row label { font-size: 15px; }
+    .field label, .row label, .field .colon { font-size: 15px; }
     .sign { padding: 30px 10px 10px; font-size: 14px; }
-    .sign input.line { width: 130px; }
-    input.line { font-size: 17px; }
+    .sign .line { width: 130px; }
+    .line { font-size: 17px; }
+    .slip.layout-boxed .body { padding: 14px 8px; }
   }
+  /* the export stage and thumbnails always use the full-size layout */
+  #exportStage .slip, .tpl-card .slip { --x: 0; }
 
   @media print {
     @page { size: A5 portrait; margin: 8mm; }
     body { background: #fff; }
-    .toolbar, .status, .hint, #registerView, #settingsView, .auto { display: none !important; }
+    .toolbar, .status, .hint, .no-print, .auto { display: none !important; }
     .wrap { padding: 0; max-width: none; }
     .slip { box-shadow: none; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     [contenteditable]:hover { background: none; }
@@ -160,11 +214,16 @@
   <h1>Billing</h1>
   <button class="tab active" data-view="billView">Bill Entry</button>
   <button class="tab" data-view="registerView">All Bills</button>
+  <button class="tab" data-view="templatesView">Templates</button>
+  <button class="tab" data-view="reviewsView">Reviews</button>
   <button class="tab" data-view="settingsView">Settings</button>
   <span class="spacer"></span>
-  <span id="billActions">
+  <span class="actions" id="billActions">
     <button class="ghost" id="btnNew">New</button>
     <button class="primary" id="btnSave">Save</button>
+    <button class="ghost" id="btnPdf">PDF</button>
+    <button class="ghost" id="btnJpg">JPEG</button>
+    <button class="ghost hidden" id="btnShare">Share</button>
     <button class="ghost" id="btnPrint">Print</button>
     <button class="danger hidden" id="btnDelete">Delete</button>
   </span>
@@ -175,19 +234,38 @@
 
   <!-- ================= BILL ENTRY ================= -->
   <section id="billView">
-    <div class="slip">
+    <div class="slip" id="slip">
       <div class="frame">
         <div class="head">
-          <!-- simple backhoe loader drawing -->
-          <svg viewBox="0 0 120 80" aria-hidden="true" fill="none" stroke="#3b2a6b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="48" y="22" width="26" height="24" rx="2" fill="#3b2a6b55"/>
-            <path d="M40 46 H100 V36 H74"/>
-            <path d="M100 40 L114 44 L112 56 H100"/>
-            <path d="M48 26 L28 8 L10 22 L6 38"/>
-            <path d="M6 38 L14 44 L18 34"/>
-            <circle cx="56" cy="60" r="12" fill="#3b2a6b"/>
-            <circle cx="96" cy="64" r="8" fill="#3b2a6b"/>
-          </svg>
+          <div class="logo" aria-hidden="true">
+            <!-- tracked excavator -->
+            <svg viewBox="0 0 160 100" fill="currentColor">
+              <!-- tracks -->
+              <rect x="6" y="74" width="92" height="20" rx="10"/>
+              <circle cx="17" cy="84" r="5.5" fill="var(--paper)"/>
+              <circle cx="35" cy="84" r="3.5" fill="var(--paper)"/>
+              <circle cx="52" cy="84" r="3.5" fill="var(--paper)"/>
+              <circle cx="69" cy="84" r="3.5" fill="var(--paper)"/>
+              <circle cx="87" cy="84" r="5.5" fill="var(--paper)"/>
+              <!-- slew ring + upper body / counterweight -->
+              <rect x="30" y="68" width="44" height="7"/>
+              <path d="M6 50 h74 v20 H10 a4 4 0 0 1 -4 -4z"/>
+              <!-- cab -->
+              <path d="M52 24 h22 l6 26 H52z"/>
+              <path d="M56 28 h15 l4 18 H56z" fill="var(--paper)" opacity=".85"/>
+              <!-- exhaust -->
+              <rect x="20" y="40" width="4" height="10"/>
+              <!-- boom -->
+              <path d="M70 56 L108 10 L117 15 L82 62z"/>
+              <!-- arm -->
+              <path d="M108 9 L141 38 L135 44 L106 18z"/>
+              <!-- hydraulic cylinder -->
+              <path d="M78 46 L101 21" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+              <!-- bucket -->
+              <path d="M135 38 L152 46 L150 66 L140 72 L128 64 L132 58 L140 62 L143 50 L133 45z"/>
+              <path d="M140 72 l-3 4 M146 69 l-1 5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+            </svg>
+          </div>
           <div class="brand">
             <div class="sym" contenteditable="true" data-setting="symbol">உ</div>
             <div class="t1" contenteditable="true" data-setting="title1">STAR</div>
@@ -202,23 +280,22 @@
 
         <div class="meta">
           <div class="row between">
-            <div class="row"><label for="billNo">No.</label><input class="line" id="billNo" inputmode="numeric"></div>
-            <div class="row"><label for="billDate">Date</label><input class="line" id="billDate" type="date"></div>
+            <div class="row"><label for="billNo">No.</label><input class="line billno" id="billNo" inputmode="numeric"></div>
+            <div class="row"><label for="billDate">Date</label><input class="line billdate" id="billDate" type="date"></div>
           </div>
           <div class="row"><label for="party">M/s.</label><input class="line" id="party" list="partyList" autocomplete="off"></div>
-          <div class="row"><input class="line" id="address" placeholder=""></div>
-          <datalist id="partyList"></datalist>
+          <div class="row"><input class="line" id="address"></div>
         </div>
 
         <div class="body">
           <div class="field"><label for="startMeter" contenteditable="true" data-setting="lblStart">Starting Meeter</label><span class="colon">:</span><input class="line" id="startMeter" inputmode="decimal"><span></span></div>
           <div class="field"><label for="closeMeter" contenteditable="true" data-setting="lblClose">Closing Meeter</label><span class="colon">:</span><input class="line" id="closeMeter" inputmode="decimal"><span></span></div>
-          <div class="field computed" data-calc="running"><label for="running" contenteditable="true" data-setting="lblRunning">Running</label><span class="colon">:</span><input class="line" id="running" inputmode="decimal"><button class="auto" title="Back to automatic">↺</button></div>
-          <div class="field computed" data-calc="total"><label for="total" contenteditable="true" data-setting="lblTotal">Total</label><span class="colon">:</span><input class="line" id="total" inputmode="decimal"><button class="auto" title="Back to automatic">↺</button></div>
+          <div class="field computed"><label for="running" contenteditable="true" data-setting="lblRunning">Running</label><span class="colon">:</span><input class="line" id="running" inputmode="decimal"><button class="auto" title="Back to automatic">↺</button></div>
+          <div class="field computed"><label for="total" contenteditable="true" data-setting="lblTotal">Total</label><span class="colon">:</span><input class="line" id="total" inputmode="decimal"><button class="auto" title="Back to automatic">↺</button></div>
           <div class="field"><label for="rate" contenteditable="true" data-setting="lblRate">R / H</label><span class="colon">:</span><input class="line" id="rate" inputmode="decimal"><span></span></div>
-          <div class="field computed" data-calc="amount"><label for="amount" contenteditable="true" data-setting="lblAmount">Amount</label><span class="colon">:</span><input class="line" id="amount" inputmode="decimal"><button class="auto" title="Back to automatic">↺</button></div>
+          <div class="field computed"><label for="amount" contenteditable="true" data-setting="lblAmount">Amount</label><span class="colon">:</span><input class="line" id="amount" inputmode="decimal"><button class="auto" title="Back to automatic">↺</button></div>
           <div class="field"><label for="advance" contenteditable="true" data-setting="lblAdvance">Advance</label><span class="colon">:</span><input class="line" id="advance" inputmode="decimal"><span></span></div>
-          <div class="field computed" data-calc="balance"><label for="balance" contenteditable="true" data-setting="lblBalance">Balance</label><span class="colon">:</span><input class="line" id="balance" inputmode="decimal"><button class="auto" title="Back to automatic">↺</button></div>
+          <div class="field computed"><label for="balance" contenteditable="true" data-setting="lblBalance">Balance</label><span class="colon">:</span><input class="line" id="balance" inputmode="decimal"><button class="auto" title="Back to automatic">↺</button></div>
         </div>
 
         <div class="sign">
@@ -227,10 +304,26 @@
         </div>
       </div>
     </div>
+    <datalist id="partyList"></datalist>
+
     <div class="hint">
       Every field and every printed word on the slip can be edited — click the heading, phone numbers or labels to change them (saved automatically).
       Running = Closing − Starting, Total = Running, Amount = Total × R/H, Balance = Amount − Advance.
-      You can type over any calculated value; press ↺ to go back to the automatic figure.
+      Type over any calculated value to change it; press ↺ to go back to the automatic figure.
+      Template: <b id="tplName"></b> (change it in Templates).
+    </div>
+
+    <div class="panel no-print" id="billReview">
+      <h2>Party review for this bill</h2>
+      <p id="reviewNeedsSave" style="color:#666;margin:0">Save the bill first, then add the party's rating and feedback here.</p>
+      <div id="reviewForm" class="hidden">
+        <div class="stars" id="billStars"></div>
+        <textarea id="billReviewText" placeholder="What did the party say about the work?" style="margin-top:8px"></textarea>
+        <div class="filters" style="margin-top:8px;margin-bottom:0">
+          <button class="primary" id="btnBillReview">Save Review</button>
+          <button id="btnBillReviewDel" class="hidden">Remove Review</button>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -246,7 +339,7 @@
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>No.</th><th>Date</th><th>M/s.</th><th class="num">Hours</th><th class="num">R/H</th><th class="num">Amount</th><th class="num">Advance</th><th class="num">Balance</th><th></th><th></th></tr>
+            <tr><th>No.</th><th>Date</th><th>M/s.</th><th class="num">Hours</th><th class="num">R/H</th><th class="num">Amount</th><th class="num">Advance</th><th class="num">Balance</th><th></th><th>Review</th><th></th></tr>
           </thead>
           <tbody id="billRows"></tbody>
           <tfoot id="billFoot"></tfoot>
@@ -257,6 +350,44 @@
         <button id="btnBackup">Download Backup</button>
         <label class="btn" style="border:1px solid #ccc">Restore Backup <input type="file" id="restoreFile" accept=".json" hidden></label>
       </div>
+    </div>
+  </section>
+
+  <!-- ================= TEMPLATES ================= -->
+  <section id="templatesView" class="hidden">
+    <div class="panel">
+      <h2>Bill Templates</h2>
+      <p style="margin:0 0 14px;color:#666;font-size:14px">Tap a design to use it for the bill on screen and for every new bill. Saved bills keep the design they were saved with. Previews show the bill that's open right now.</p>
+      <div class="tpl-grid" id="tplGrid"></div>
+    </div>
+  </section>
+
+  <!-- ================= REVIEWS ================= -->
+  <section id="reviewsView" class="hidden">
+    <div class="panel">
+      <h2>Customer Reviews</h2>
+      <div class="review-summary">
+        <div class="review-avg"><div class="big" id="avgRating">–</div><div class="stars small" id="avgStars"></div><div style="font-size:13px;color:#666" id="reviewCount"></div></div>
+        <div class="bars" id="ratingBars"></div>
+      </div>
+      <div class="filters">
+        <input id="reviewSearch" placeholder="Search party / comment">
+        <select id="reviewFilter">
+          <option value="0">All ratings</option>
+          <option value="5">5 ★</option><option value="4">4 ★</option><option value="3">3 ★</option><option value="2">2 ★</option><option value="1">1 ★</option>
+        </select>
+      </div>
+      <div id="reviewList"></div>
+    </div>
+    <div class="panel">
+      <h2>Add a review</h2>
+      <div class="filters">
+        <input id="rvParty" list="partyList" placeholder="Party name (M/s.)">
+        <select id="rvBill"><option value="">Not linked to a bill</option></select>
+      </div>
+      <div class="stars" id="rvStars"></div>
+      <textarea id="rvText" placeholder="Comment" style="margin-top:8px"></textarea>
+      <div style="margin-top:8px"><button class="primary" id="btnAddReview">Add Review</button></div>
     </div>
   </section>
 
@@ -277,10 +408,17 @@
   </section>
 </div>
 
+<div id="exportStage" aria-hidden="true"></div>
+
+<!-- PDF / JPEG export libraries (bundled locally so it works offline) -->
+<script src="vendor/html2canvas-1.4.1.min.js"></script>
+<script src="vendor/jspdf-2.5.1.umd.min.js"></script>
+
 <script>
 (function () {
   const BILLS_KEY = 'sem_bills_v1';
   const SETTINGS_KEY = 'sem_settings_v1';
+  const REVIEWS_KEY = 'sem_reviews_v1';
   const $ = (id) => document.getElementById(id);
 
   function load(key, fallback) {
@@ -292,28 +430,66 @@
     catch (e) { flash('Could not save — browser storage is blocked.', true); return false; }
   }
 
+  // ---------- 15 templates ----------
+  const SERIF = '"Times New Roman", Georgia, serif';
+  const SANS = 'Arial, Helvetica, sans-serif';
+  const IMPACT = 'Impact, "Arial Black", "Helvetica Neue", sans-serif';
+  const MONO = '"Courier New", Courier, monospace';
+  const HAND = '"Segoe Print", "Comic Sans MS", "Bradley Hand", cursive';
+  const TEMPLATES = [
+    { id: 'pink',     name: 'Classic Pink',      sub: 'Same as the paper book', layout: 'classic', paper: '#f9c6d3', ink: '#3b2a6b', hand: '#1f2a55', brand: SERIF },
+    { id: 'yellow',   name: 'Carbon Yellow',     sub: 'Duplicate copy look',    layout: 'classic', paper: '#fbeea0', ink: '#2c3e8f', hand: '#1b2a6b', brand: SERIF },
+    { id: 'sky',      name: 'Sky Blue',          sub: 'Classic layout',         layout: 'classic', paper: '#cfe6fb', ink: '#123d73', hand: '#0b2547', brand: SERIF },
+    { id: 'mint',     name: 'Mint Green',        sub: 'Classic layout',         layout: 'classic', paper: '#d3f2df', ink: '#1d5a35', hand: '#123a22', brand: SERIF },
+    { id: 'white',    name: 'Plain White',       sub: 'Classic, prints cleanly', layout: 'classic', paper: '#ffffff', ink: '#222222', hand: '#1a3a8a', brand: SERIF },
+    { id: 'royal',    name: 'Royal Banner',      sub: 'Navy header band',       layout: 'banner',  paper: '#ffffff', ink: '#1c2f6e', hand: '#1c2f6e', brand: SERIF },
+    { id: 'saffron',  name: 'Saffron Banner',    sub: 'Orange header band',     layout: 'banner',  paper: '#fff7ec', ink: '#c2410c', hand: '#7c2d12', brand: IMPACT },
+    { id: 'digger',   name: 'Digger Yellow',     sub: 'Black on machine yellow', layout: 'banner', paper: '#ffd23f', ink: '#151515', hand: '#151515', brand: IMPACT },
+    { id: 'forest',   name: 'Forest Banner',     sub: 'Green header band',      layout: 'banner',  paper: '#f3faf4', ink: '#1f5130', hand: '#173d24', brand: SANS },
+    { id: 'maroon',   name: 'Maroon Boxed',      sub: 'Table-style rows',       layout: 'boxed',   paper: '#fdf2f2', ink: '#7f1d1d', hand: '#3f0d0d', brand: SERIF },
+    { id: 'steel',    name: 'Steel Grey Boxed',  sub: 'Table-style rows',       layout: 'boxed',   paper: '#f1f3f5', ink: '#37414d', hand: '#111827', brand: SANS },
+    { id: 'teal',     name: 'Teal Boxed',        sub: 'Table-style rows',       layout: 'boxed',   paper: '#e6f6f5', ink: '#0f5e5a', hand: '#083c39', brand: SANS },
+    { id: 'mono',     name: 'Minimal Black',     sub: 'Clean, no frame',        layout: 'minimal', paper: '#ffffff', ink: '#111111', hand: '#111111', brand: SANS, handFont: SANS },
+    { id: 'indigo',   name: 'Minimal Indigo',    sub: 'Clean, no frame',        layout: 'minimal', paper: '#f7f7ff', ink: '#3730a3', hand: '#1e1b4b', brand: SANS, handFont: SANS },
+    { id: 'receipt',  name: 'Thermal Receipt',   sub: 'Narrow, typewriter',     layout: 'receipt', paper: '#ffffff', ink: '#222222', hand: '#000000', brand: MONO, body: MONO, handFont: MONO }
+  ];
+  const tplById = (id) => TEMPLATES.find(t => t.id === id) || TEMPLATES[0];
+
+  function applyTemplate(slip, id) {
+    const t = tplById(id);
+    TEMPLATES.forEach(x => slip.classList.remove('layout-' + x.layout));
+    slip.classList.add('layout-' + t.layout);
+    slip.style.setProperty('--paper', t.paper);
+    slip.style.setProperty('--ink', t.ink);
+    slip.style.setProperty('--hand', t.hand);
+    slip.style.setProperty('--brand-font', t.brand);
+    slip.style.setProperty('--body-font', t.body || SANS);
+    slip.style.setProperty('--hand-font', t.handFont || HAND);
+  }
+
   // ---------- Settings & editable header ----------
   const defaultText = {};
   document.querySelectorAll('[data-setting]').forEach(el => { defaultText[el.dataset.setting] = el.textContent; });
 
-  let settings = Object.assign({ nextNo: 50, currency: '₹', operator: '', text: {} }, load(SETTINGS_KEY, {}));
+  let settings = Object.assign({ nextNo: 50, currency: '₹', operator: '', text: {}, template: 'pink' }, load(SETTINGS_KEY, {}));
   function applyText() {
-    document.querySelectorAll('[data-setting]').forEach(el => {
+    document.querySelectorAll('#slip [data-setting]').forEach(el => {
       const k = el.dataset.setting;
       el.textContent = settings.text[k] != null ? settings.text[k] : defaultText[k];
     });
   }
-  document.querySelectorAll('[data-setting]').forEach(el => {
+  document.querySelectorAll('#slip [data-setting]').forEach(el => {
     el.addEventListener('input', () => { settings.text[el.dataset.setting] = el.textContent; store(SETTINGS_KEY, settings); });
     el.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); el.blur(); } });
-    // clicking a label must not jump focus into the input
-    el.addEventListener('click', e => e.preventDefault());
+    el.addEventListener('click', e => e.preventDefault()); // don't jump into the input
   });
   applyText();
 
   // ---------- Bills ----------
   let bills = load(BILLS_KEY, []);
+  let reviews = load(REVIEWS_KEY, []);
   let currentId = null;
+  let currentTpl = settings.template;
 
   const FIELDS = ['billNo','billDate','party','address','startMeter','closeMeter','running','total','rate','amount','advance','balance','operator','partySign'];
   const CALC = ['running','total','amount','balance'];
@@ -322,6 +498,8 @@
   const fmt = (n) => (n == null ? '' : (Math.round(n * 100) / 100).toString());
   const money = (n) => (n == null || n === '' ? '' : settings.currency + Number(n).toLocaleString('en-IN', { maximumFractionDigits: 2 }));
   const today = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+  function fmtDate(d) { if (!d) return ''; const p = d.split('-'); return p.length === 3 ? p[2] + '-' + p[1] + '-' + p[0] : d; }
 
   function isManual(id) { return $(id).closest('.field').classList.contains('manual'); }
   function setManual(id, on) { $(id).closest('.field').classList.toggle('manual', on); }
@@ -335,24 +513,31 @@
     const a = num($('amount').value), adv = num($('advance').value);
     if (!isManual('balance')) $('balance').value = a != null ? fmt(a - (adv || 0)) : '';
   }
-
   FIELDS.forEach(id => $(id).addEventListener('input', () => {
     if (CALC.includes(id)) setManual(id, $(id).value.trim() !== '');
     recalc();
   }));
-  document.querySelectorAll('.auto').forEach(b => b.addEventListener('click', () => {
-    const inp = b.closest('.field').querySelector('input'); setManual(inp.id, false); recalc();
+  document.querySelectorAll('#slip .auto').forEach(b => b.addEventListener('click', () => {
+    setManual(b.closest('.field').querySelector('input').id, false); recalc();
   }));
 
   function readForm() {
     const o = {}; FIELDS.forEach(id => o[id] = $(id).value.trim());
     o.manual = CALC.filter(isManual);
+    o.template = currentTpl;
     return o;
+  }
+  function setTemplate(id) {
+    currentTpl = tplById(id).id;
+    applyTemplate($('slip'), currentTpl);
+    $('tplName').textContent = tplById(currentTpl).name;
   }
   function fillForm(b) {
     FIELDS.forEach(id => $(id).value = b[id] || '');
     CALC.forEach(id => setManual(id, (b.manual || []).includes(id)));
+    setTemplate(b.template || settings.template);
     recalc();
+    renderBillReview();
   }
 
   function newBill() {
@@ -364,13 +549,15 @@
 
   function saveBill() {
     const data = readForm();
-    if (!data.billNo) { flash('Enter a bill number.', true); return; }
-    if (!data.party) { flash('Enter the party name (M/s.).', true); $('party').focus(); return; }
+    if (!data.billNo) { flash('Enter a bill number.', true); return false; }
+    if (!data.party) { flash('Enter the party name (M/s.).', true); $('party').focus(); return false; }
     const dup = bills.find(b => b.billNo === data.billNo && b.id !== currentId);
-    if (dup && !confirm('Bill No. ' + data.billNo + ' already exists. Save anyway?')) return;
+    if (dup && !confirm('Bill No. ' + data.billNo + ' already exists. Save anyway?')) return false;
     if (currentId) {
       const i = bills.findIndex(b => b.id === currentId);
       bills[i] = Object.assign(bills[i], data, { updated: Date.now() });
+      reviews.forEach(r => { if (r.billId === currentId) { r.billNo = data.billNo; r.party = data.party; } });
+      store(REVIEWS_KEY, reviews);
     } else {
       currentId = 'b' + Date.now();
       bills.push(Object.assign({ id: currentId, created: Date.now() }, data));
@@ -380,14 +567,17 @@
     if (store(BILLS_KEY, bills)) {
       flash('Bill No. ' + data.billNo + ' saved.');
       $('btnDelete').classList.remove('hidden');
-      updateParties();
+      updateParties(); renderBillReview();
+      return true;
     }
+    return false;
   }
 
   function deleteBill(id) {
     const b = bills.find(x => x.id === id); if (!b) return;
     if (!confirm('Delete Bill No. ' + b.billNo + ' (' + b.party + ')?')) return;
     bills = bills.filter(x => x.id !== id); store(BILLS_KEY, bills);
+    reviews.forEach(r => { if (r.billId === id) r.billId = null; }); store(REVIEWS_KEY, reviews);
     flash('Bill deleted.');
     if (id === currentId) newBill();
     renderRegister();
@@ -401,7 +591,7 @@
   }
 
   function updateParties() {
-    const names = [...new Set(bills.map(b => b.party).filter(Boolean))].sort();
+    const names = [...new Set(bills.map(b => b.party).concat(reviews.map(r => r.party)).filter(Boolean))].sort();
     $('partyList').innerHTML = names.map(n => '<option value="' + esc(n) + '">').join('');
   }
   $('party').addEventListener('change', () => {
@@ -410,10 +600,209 @@
     if (last) $('address').value = last.address;
   });
 
-  // ---------- Register ----------
-  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
-  function fmtDate(d) { if (!d) return ''; const [y, m, dd] = d.split('-'); return dd + '-' + m + '-' + y; }
+  // ---------- Static copy of the slip (for PDF/JPEG and template previews) ----------
+  function staticSlip(templateId) {
+    const src = $('slip');
+    const clone = src.cloneNode(true);
+    const srcInputs = src.querySelectorAll('input');
+    clone.querySelectorAll('input').forEach((inp, i) => {
+      const span = document.createElement('span');
+      span.className = inp.className;
+      const v = srcInputs[i].value;
+      span.textContent = srcInputs[i].type === 'date' ? fmtDate(v) : v;
+      inp.replaceWith(span);
+    });
+    clone.querySelectorAll('.auto').forEach(el => el.remove());
+    clone.querySelectorAll('[contenteditable]').forEach(el => el.removeAttribute('contenteditable'));
+    clone.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
+    clone.querySelectorAll('label').forEach(el => el.removeAttribute('for'));
+    clone.removeAttribute('id');
+    clone.style.boxShadow = 'none';
+    if (templateId) applyTemplate(clone, templateId);
+    return clone;
+  }
 
+  async function renderCanvas() {
+    if (typeof html2canvas !== 'function') throw new Error('Export library not loaded');
+    const stage = $('exportStage');
+    stage.innerHTML = '';
+    const clone = staticSlip();
+    stage.appendChild(clone);
+    try {
+      return await html2canvas(clone, { scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false });
+    } finally { stage.innerHTML = ''; }
+  }
+
+  function fileBase() {
+    const party = ($('party').value || 'bill').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '_');
+    return 'Bill_' + ($('billNo').value || '') + '_' + party;
+  }
+  function downloadUrl(name, url) {
+    const a = document.createElement('a'); a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+
+  async function withBusy(btn, fn) {
+    btn.disabled = true; const t = btn.textContent; btn.textContent = '…';
+    try { await fn(); } catch (e) { console.error(e); flash('Could not create the file: ' + e.message, true); }
+    finally { btn.disabled = false; btn.textContent = t; }
+  }
+
+  async function makePdfBlob() {
+    const canvas = await renderCanvas();
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a5' });
+    const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight(), m = 6;
+    let w = pw - m * 2, h = w * canvas.height / canvas.width;
+    if (h > ph - m * 2) { h = ph - m * 2; w = h * canvas.width / canvas.height; }
+    pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', (pw - w) / 2, m, w, h);
+    pdf.setProperties({ title: fileBase() });
+    return pdf.output('blob');
+  }
+  async function makeJpgBlob() {
+    const canvas = await renderCanvas();
+    return new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.95));
+  }
+  function saveBlob(blob, name) {
+    const url = URL.createObjectURL(blob); downloadUrl(name, url);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+
+  $('btnPdf').addEventListener('click', e => withBusy(e.currentTarget, async () => {
+    saveBlob(await makePdfBlob(), fileBase() + '.pdf'); flash('PDF downloaded.');
+  }));
+  $('btnJpg').addEventListener('click', e => withBusy(e.currentTarget, async () => {
+    saveBlob(await makeJpgBlob(), fileBase() + '.jpg'); flash('JPEG downloaded.');
+  }));
+  // Share (WhatsApp etc.) where the phone supports sharing files
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [new File([''], 'x.jpg', { type: 'image/jpeg' })] })) {
+      $('btnShare').classList.remove('hidden');
+    }
+  } catch (e) { /* not supported */ }
+  $('btnShare').addEventListener('click', e => withBusy(e.currentTarget, async () => {
+    const file = new File([await makeJpgBlob()], fileBase() + '.jpg', { type: 'image/jpeg' });
+    await navigator.share({ files: [file], title: fileBase() });
+  }));
+
+  // ---------- Templates view ----------
+  function renderTemplates() {
+    const grid = $('tplGrid');
+    grid.innerHTML = '';
+    TEMPLATES.forEach((t, i) => {
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'tpl-card' + (t.id === currentTpl ? ' active' : '');
+      const thumb = document.createElement('div'); thumb.className = 'thumb';
+      const s = staticSlip(t.id);
+      thumb.appendChild(s);
+      card.appendChild(thumb);
+      card.insertAdjacentHTML('beforeend', '<div class="name">' + (i + 1) + '. ' + esc(t.name) + '</div><div class="sub">' + esc(t.sub) + '</div>');
+      card.addEventListener('click', () => {
+        setTemplate(t.id);
+        settings.template = t.id; store(SETTINGS_KEY, settings);
+        if (currentId) { const b = bills.find(x => x.id === currentId); if (b) { b.template = t.id; store(BILLS_KEY, bills); } }
+        grid.querySelectorAll('.tpl-card').forEach(c => c.classList.remove('active'));
+        card.classList.add('active');
+        flash('Template "' + t.name + '" selected.');
+      });
+      grid.appendChild(card);
+    });
+    // scale previews to card width
+    requestAnimationFrame(() => grid.querySelectorAll('.thumb').forEach(th => {
+      const s = th.firstChild, scale = th.clientWidth / 760;
+      s.style.transform = 'scale(' + scale + ')';
+      th.style.height = Math.ceil(s.offsetHeight * scale) + 'px';
+    }));
+  }
+
+  // ---------- Reviews ----------
+  function starWidget(el) {
+    let value = 0;
+    el.innerHTML = [1, 2, 3, 4, 5].map(n => '<button type="button" data-v="' + n + '" aria-label="' + n + ' star">★</button>').join('');
+    const paint = () => el.querySelectorAll('button').forEach(b => b.classList.toggle('on', +b.dataset.v <= value));
+    el.addEventListener('click', e => { if (e.target.dataset.v) { value = +e.target.dataset.v; paint(); } });
+    return { get: () => value, set: (v) => { value = v || 0; paint(); } };
+  }
+  const starText = (n) => '★★★★★'.slice(0, n) + '<span style="color:#ccc">' + '★★★★★'.slice(0, 5 - n) + '</span>';
+
+  const billStars = starWidget($('billStars'));
+  const rvStars = starWidget($('rvStars'));
+
+  function renderBillReview() {
+    const saved = !!currentId && bills.some(b => b.id === currentId);
+    $('reviewNeedsSave').classList.toggle('hidden', saved);
+    $('reviewForm').classList.toggle('hidden', !saved);
+    const r = saved ? reviews.find(x => x.billId === currentId) : null;
+    billStars.set(r ? r.rating : 0);
+    $('billReviewText').value = r ? r.comment : '';
+    $('btnBillReviewDel').classList.toggle('hidden', !r);
+  }
+  $('btnBillReview').addEventListener('click', () => {
+    const rating = billStars.get();
+    if (!rating) { flash('Tap the stars to give a rating.', true); return; }
+    const b = bills.find(x => x.id === currentId); if (!b) return;
+    let r = reviews.find(x => x.billId === currentId);
+    if (!r) { r = { id: 'r' + Date.now(), billId: b.id, created: Date.now() }; reviews.push(r); }
+    Object.assign(r, { billNo: b.billNo, party: b.party, rating, comment: $('billReviewText').value.trim(), date: today() });
+    store(REVIEWS_KEY, reviews); renderBillReview(); flash('Review saved.');
+  });
+  $('btnBillReviewDel').addEventListener('click', () => {
+    reviews = reviews.filter(x => x.billId !== currentId); store(REVIEWS_KEY, reviews); renderBillReview(); flash('Review removed.');
+  });
+
+  function renderReviews() {
+    const n = reviews.length;
+    const avg = n ? reviews.reduce((s, r) => s + r.rating, 0) / n : 0;
+    $('avgRating').textContent = n ? avg.toFixed(1) : '–';
+    $('avgStars').innerHTML = starText(Math.round(avg));
+    $('reviewCount').textContent = n + ' review' + (n === 1 ? '' : 's');
+    $('ratingBars').innerHTML = [5, 4, 3, 2, 1].map(s => {
+      const c = reviews.filter(r => r.rating === s).length;
+      return '<div class="bar"><span>' + s + ' ★</span><div class="track"><div class="fill" style="width:' + (n ? c / n * 100 : 0) + '%"></div></div><span>' + c + '</span></div>';
+    }).join('');
+
+    const q = $('reviewSearch').value.trim().toLowerCase(), f = +$('reviewFilter').value;
+    const list = reviews.filter(r => (!f || r.rating === f) &&
+      (!q || (r.party || '').toLowerCase().includes(q) || (r.comment || '').toLowerCase().includes(q)))
+      .sort((a, b) => (b.date || '').localeCompare(a.date || '') || b.created - a.created);
+    $('reviewList').innerHTML = list.length ? list.map(r =>
+      '<div class="review-item"><div class="top"><div><span class="who">' + esc(r.party) + '</span> ' +
+      '<span class="stars small">' + starText(r.rating) + '</span></div>' +
+      '<div class="row-actions"><span class="when">' + fmtDate(r.date) + (r.billNo ? ' · Bill No. ' + esc(r.billNo) : '') + '</span> ' +
+      (r.billId ? '<button data-openbill="' + r.billId + '">Open bill</button> ' : '') +
+      '<button data-delrev="' + r.id + '">✕</button></div></div>' +
+      (r.comment ? '<p>' + esc(r.comment) + '</p>' : '') + '</div>').join('')
+      : '<div class="empty">No reviews yet.</div>';
+
+    $('rvBill').innerHTML = '<option value="">Not linked to a bill</option>' +
+      [...bills].sort((a, b) => (parseInt(b.billNo) || 0) - (parseInt(a.billNo) || 0))
+        .map(b => '<option value="' + b.id + '">No. ' + esc(b.billNo) + ' — ' + esc(b.party) + ' (' + fmtDate(b.billDate) + ')</option>').join('');
+  }
+  $('reviewList').addEventListener('click', e => {
+    if (e.target.dataset.openbill) openBill(e.target.dataset.openbill);
+    if (e.target.dataset.delrev && confirm('Delete this review?')) {
+      reviews = reviews.filter(r => r.id !== e.target.dataset.delrev); store(REVIEWS_KEY, reviews); renderReviews();
+    }
+  });
+  ['reviewSearch', 'reviewFilter'].forEach(id => $(id).addEventListener('input', renderReviews));
+  $('rvBill').addEventListener('change', () => {
+    const b = bills.find(x => x.id === $('rvBill').value); if (b) $('rvParty').value = b.party;
+  });
+  $('btnAddReview').addEventListener('click', () => {
+    const party = $('rvParty').value.trim(), rating = rvStars.get();
+    if (!party) { flash('Enter the party name.', true); return; }
+    if (!rating) { flash('Tap the stars to give a rating.', true); return; }
+    const b = bills.find(x => x.id === $('rvBill').value);
+    if (b && reviews.some(r => r.billId === b.id) && !confirm('This bill already has a review. Add another?')) return;
+    reviews.push({ id: 'r' + Date.now(), billId: b ? b.id : null, billNo: b ? b.billNo : '', party, rating,
+      comment: $('rvText').value.trim(), date: today(), created: Date.now() });
+    store(REVIEWS_KEY, reviews);
+    $('rvParty').value = ''; $('rvText').value = ''; $('rvBill').value = ''; rvStars.set(0);
+    renderReviews(); updateParties(); flash('Review added.');
+  });
+
+  // ---------- Register ----------
   function filtered() {
     const q = $('search').value.trim().toLowerCase(), f = $('fromDate').value, t = $('toDate').value;
     return bills.filter(b =>
@@ -421,56 +810,58 @@
       (!f || b.billDate >= f) && (!t || b.billDate <= t)
     ).sort((a, b) => (b.billDate || '').localeCompare(a.billDate || '') || (parseInt(b.billNo) || 0) - (parseInt(a.billNo) || 0));
   }
-
   function renderRegister() {
     const list = filtered();
     if (!list.length) {
-      $('billRows').innerHTML = '<tr><td colspan="10" class="empty">No bills yet.</td></tr>';
+      $('billRows').innerHTML = '<tr><td colspan="11" class="empty">No bills yet.</td></tr>';
       $('billFoot').innerHTML = ''; return;
     }
     let tH = 0, tA = 0, tAdv = 0, tBal = 0;
     $('billRows').innerHTML = list.map(b => {
       tH += num(b.total) || 0; tA += num(b.amount) || 0; tAdv += num(b.advance) || 0; tBal += num(b.balance) || 0;
       const bal = num(b.balance) || 0;
+      const r = reviews.find(x => x.billId === b.id);
       return '<tr>' +
         '<td>' + esc(b.billNo) + '</td><td>' + fmtDate(b.billDate) + '</td><td>' + esc(b.party) + '</td>' +
         '<td class="num">' + esc(b.total) + '</td><td class="num">' + esc(b.rate) + '</td>' +
         '<td class="num">' + money(b.amount) + '</td><td class="num">' + money(b.advance) + '</td>' +
         '<td class="num">' + money(b.balance) + '</td>' +
         '<td>' + (bal > 0 ? '<span class="pill due">Due</span>' : '<span class="pill paid">Paid</span>') + '</td>' +
+        '<td><span class="stars small">' + (r ? starText(r.rating) : '') + '</span></td>' +
         '<td class="row-actions"><button data-open="' + b.id + '">Open</button> <button data-del="' + b.id + '">✕</button></td>' +
         '</tr>';
     }).join('');
     $('billFoot').innerHTML = '<tr><td colspan="3">' + list.length + ' bill(s)</td><td class="num">' + fmt(tH) +
-      '</td><td></td><td class="num">' + money(tA) + '</td><td class="num">' + money(tAdv) + '</td><td class="num">' + money(tBal) + '</td><td colspan="2"></td></tr>';
+      '</td><td></td><td class="num">' + money(tA) + '</td><td class="num">' + money(tAdv) + '</td><td class="num">' + money(tBal) + '</td><td colspan="3"></td></tr>';
   }
   $('billRows').addEventListener('click', e => {
-    const o = e.target.dataset.open, d = e.target.dataset.del;
-    if (o) openBill(o); if (d) deleteBill(d);
+    if (e.target.dataset.open) openBill(e.target.dataset.open);
+    if (e.target.dataset.del) deleteBill(e.target.dataset.del);
   });
   ['search', 'fromDate', 'toDate'].forEach(id => $(id).addEventListener('input', renderRegister));
 
-  function download(name, text, type) {
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([text], { type }));
-    a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  }
+  function downloadText(name, text, type) { saveBlob(new Blob([text], { type }), name); }
   $('btnCsv').addEventListener('click', () => {
     const cols = ['billNo','billDate','party','address','startMeter','closeMeter','running','total','rate','amount','advance','balance','operator'];
     const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
-    const csv = [cols.join(',')].concat(filtered().map(b => cols.map(c => q(b[c])).join(','))).join('\n');
-    download('bills-' + today() + '.csv', '﻿' + csv, 'text/csv');
+    const csv = [cols.concat(['rating', 'review']).join(',')].concat(filtered().map(b => {
+      const r = reviews.find(x => x.billId === b.id);
+      return cols.map(c => q(b[c])).concat([q(r ? r.rating : ''), q(r ? r.comment : '')]).join(',');
+    })).join('\n');
+    downloadText('bills-' + today() + '.csv', '﻿' + csv, 'text/csv');
   });
-  $('btnBackup').addEventListener('click', () => download('bills-backup-' + today() + '.json', JSON.stringify({ bills, settings }, null, 2), 'application/json'));
+  $('btnBackup').addEventListener('click', () =>
+    downloadText('bills-backup-' + today() + '.json', JSON.stringify({ bills, reviews, settings }, null, 2), 'application/json'));
   $('restoreFile').addEventListener('change', e => {
     const f = e.target.files[0]; if (!f) return;
     f.text().then(t => {
       const d = JSON.parse(t);
       if (!Array.isArray(d.bills)) throw new Error('bad file');
       if (!confirm('Replace current ' + bills.length + ' bill(s) with ' + d.bills.length + ' from backup?')) return;
-      bills = d.bills; if (d.settings) settings = Object.assign(settings, d.settings);
-      store(BILLS_KEY, bills); store(SETTINGS_KEY, settings);
-      applyText(); renderRegister(); updateParties(); flash('Backup restored.');
+      bills = d.bills; reviews = Array.isArray(d.reviews) ? d.reviews : [];
+      if (d.settings) settings = Object.assign(settings, d.settings);
+      store(BILLS_KEY, bills); store(REVIEWS_KEY, reviews); store(SETTINGS_KEY, settings);
+      applyText(); renderRegister(); updateParties(); newBill(); flash('Backup restored.');
     }).catch(() => flash('That file is not a valid backup.', true));
     e.target.value = '';
   });
@@ -492,12 +883,16 @@
   });
 
   // ---------- Navigation ----------
+  const VIEWS = ['billView', 'registerView', 'templatesView', 'reviewsView', 'settingsView'];
   function showView(v) {
-    ['billView', 'registerView', 'settingsView'].forEach(id => $(id).classList.toggle('hidden', id !== v));
+    VIEWS.forEach(id => $(id).classList.toggle('hidden', id !== v));
     document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === v));
     $('billActions').classList.toggle('hidden', v !== 'billView');
     if (v === 'registerView') renderRegister();
+    if (v === 'templatesView') renderTemplates();
+    if (v === 'reviewsView') renderReviews();
     if (v === 'settingsView') loadSettingsForm();
+    window.scrollTo(0, 0);
   }
   document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => showView(t.dataset.view)));
 
