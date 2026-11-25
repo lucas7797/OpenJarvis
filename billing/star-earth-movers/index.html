@@ -51,19 +51,44 @@
     width: 100%;
   }
   .frame { border: 2px solid var(--ink); }
+  /* Heading: equal side columns so the title is truly centred on the page */
   .head {
-    display: grid; grid-template-columns: 130px 1fr 190px; align-items: center; gap: 6px;
-    padding: 10px 12px; border-bottom: 2px solid var(--ink); min-height: 150px;
+    display: grid; grid-template-columns: 180px minmax(0, 1fr) 180px;
+    grid-template-areas: "logo brand owner";
+    align-items: center; gap: 8px;
+    padding: 12px 14px; border-bottom: 2px solid var(--ink); min-height: 150px;
     color: var(--head-text);
   }
-  .logo { color: var(--head-text); }
+  .logo { grid-area: logo; color: var(--head-text); width: 140px; justify-self: start; }
   .logo svg { width: 100%; height: auto; display: block; }
-  .brand { text-align: center; font-family: var(--brand-font); font-weight: 700; }
+  .brand { grid-area: brand; text-align: center; font-family: var(--brand-font); font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
+  .brand > div { display: block; }
   .brand .t1 { font-size: 44px; letter-spacing: 1px; line-height: 1.1; }
   .brand .t2 { font-size: 34px; letter-spacing: 1px; line-height: 1.15; }
-  .brand .sym { font-size: 16px; }
-  .owner { text-align: right; font-weight: 700; font-size: 17px; line-height: 1.5; }
+  .brand .sym { font-size: 16px; line-height: 1.2; }
+  .owner { grid-area: owner; text-align: right; font-weight: 700; font-size: 17px; line-height: 1.5; min-width: 0; }
   .owner .name { font-size: 22px; }
+
+  /* Logo position */
+  .slip[data-logo-pos="right"] .head { grid-template-areas: "owner brand logo"; }
+  .slip[data-logo-pos="right"] .logo { justify-self: end; }
+  .slip[data-logo-pos="right"] .owner { text-align: left; }
+  .slip[data-logo-pos="top"] .head { grid-template-columns: minmax(0, 1fr); grid-template-areas: "logo" "brand" "owner"; }
+  .slip[data-logo-pos="top"] .logo { justify-self: center; width: 120px; }
+  .slip[data-logo-pos="top"] .owner { text-align: center; }
+  .slip[data-logo-pos="none"] .logo { display: none; }
+  .slip[data-logo-pos="none"] .head { grid-template-areas: ". brand owner"; }
+  /* Title alignment */
+  .slip[data-title-align="left"] .brand { text-align: left; }
+  .slip[data-title-align="center"] .brand { text-align: center; }
+  .slip[data-title-align="right"] .brand { text-align: right; }
+  /* Contact alignment (auto = follows logo position) */
+  .slip[data-contact-align="left"] .owner { text-align: left; }
+  .slip[data-contact-align="center"] .owner { text-align: center; }
+  .slip[data-contact-align="right"] .owner { text-align: right; }
+  /* Title size */
+  .slip[data-title-size="s"] .brand .t1 { font-size: 36px; } .slip[data-title-size="s"] .brand .t2 { font-size: 27px; }
+  .slip[data-title-size="l"] .brand .t1 { font-size: 52px; } .slip[data-title-size="l"] .brand .t2 { font-size: 40px; }
 
   [contenteditable] { outline: none; border-radius: 3px; }
   [contenteditable]:hover { background: #ffffff55; }
@@ -115,9 +140,9 @@
   /* Layout: receipt */
   .slip.layout-receipt { max-width: 440px; margin: 0 auto; }
   .slip.layout-receipt .frame { border: 2px dashed var(--ink); }
-  .slip.layout-receipt .head { grid-template-columns: 1fr; text-align: center; border-bottom: 2px dashed var(--ink); }
-  .slip.layout-receipt .logo { width: 110px; margin: 0 auto; }
-  .slip.layout-receipt .owner { text-align: center; }
+  .slip.layout-receipt[data-logo-pos] .head { grid-template-columns: minmax(0, 1fr); grid-template-areas: "logo" "brand" "owner"; border-bottom: 2px dashed var(--ink); }
+  .slip.layout-receipt[data-logo-pos] .logo { width: 110px; justify-self: center; }
+  .slip.layout-receipt[data-logo-pos] .owner, .slip.layout-receipt[data-logo-pos] .brand { text-align: center; }
   .slip.layout-receipt .brand .t1 { font-size: 34px; } .slip.layout-receipt .brand .t2 { font-size: 24px; }
   .slip.layout-receipt .meta { border-bottom: 2px dashed var(--ink); }
   .slip.layout-receipt .body { padding: 14px 16px; }
@@ -182,11 +207,29 @@
   .hidden { display: none !important; }
   #exportStage { position: fixed; left: -12000px; top: 0; width: 760px; }
 
+  /* Heading controls */
+  details.panel > summary { cursor: pointer; font-size: 18px; font-weight: 700; color: var(--accent); }
+  .ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 12px 0; }
+  .ctl > span { width: 140px; font-size: 14px; color: var(--muted); }
+  .seg { display: inline-flex; border: 1px solid #ccc; border-radius: 6px; overflow: hidden; }
+  .seg button { border-radius: 0; border: none; border-right: 1px solid #ccc; padding: 7px 12px; }
+  .seg button:last-child { border-right: none; }
+  .seg button.active { background: #7b5cff; color: #fff; }
+  .logo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
+  .logo-opt { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 4px; border: 2px solid #ddd; border-radius: 8px; background: #fafafa; color: #3b2a6b; --paper: #fafafa; --ink: #3b2a6b; font-size: 12px; }
+  .logo-opt svg { width: 80px; height: 50px; }
+  .logo-opt.active { border-color: #7b5cff; box-shadow: 0 0 0 3px #7b5cff33; }
+
   @media (max-width: 640px) {
-    .head { grid-template-columns: 80px 1fr; }
-    .owner { grid-column: 1 / -1; text-align: center; font-size: 15px; }
+    .head { grid-template-columns: 90px minmax(0, 1fr); grid-template-areas: "logo brand" "owner owner"; }
+    .logo { width: 86px; }
+    .slip[data-logo-pos="right"] .head { grid-template-areas: "brand logo" "owner owner"; }
+    .slip[data-logo-pos="none"] .head { grid-template-areas: "brand brand" "owner owner"; }
+    .owner { font-size: 15px; }
+    .slip[data-contact-align="auto"] .owner { text-align: center; }
     .owner .name { font-size: 18px; }
-    .brand .t1 { font-size: 32px; } .brand .t2 { font-size: 22px; }
+    .brand .t1, .slip[data-title-size] .brand .t1 { font-size: 32px; } .brand .t2, .slip[data-title-size] .brand .t2 { font-size: 22px; }
+    .ctl > span { width: 100%; }
     .body { padding: 16px 10px; }
     .field { grid-template-columns: 120px 10px 1fr 28px; }
     .field label, .row label, .field .colon { font-size: 15px; }
@@ -234,38 +277,10 @@
 
   <!-- ================= BILL ENTRY ================= -->
   <section id="billView">
-    <div class="slip" id="slip">
+    <div class="slip" id="slip" data-logo-pos="left" data-title-align="center" data-contact-align="auto" data-title-size="m">
       <div class="frame">
         <div class="head">
-          <div class="logo" aria-hidden="true">
-            <!-- tracked excavator -->
-            <svg viewBox="0 0 160 100" fill="currentColor">
-              <!-- tracks -->
-              <rect x="6" y="74" width="92" height="20" rx="10"/>
-              <circle cx="17" cy="84" r="5.5" fill="var(--paper)"/>
-              <circle cx="35" cy="84" r="3.5" fill="var(--paper)"/>
-              <circle cx="52" cy="84" r="3.5" fill="var(--paper)"/>
-              <circle cx="69" cy="84" r="3.5" fill="var(--paper)"/>
-              <circle cx="87" cy="84" r="5.5" fill="var(--paper)"/>
-              <!-- slew ring + upper body / counterweight -->
-              <rect x="30" y="68" width="44" height="7"/>
-              <path d="M6 50 h74 v20 H10 a4 4 0 0 1 -4 -4z"/>
-              <!-- cab -->
-              <path d="M52 24 h22 l6 26 H52z"/>
-              <path d="M56 28 h15 l4 18 H56z" fill="var(--paper)" opacity=".85"/>
-              <!-- exhaust -->
-              <rect x="20" y="40" width="4" height="10"/>
-              <!-- boom -->
-              <path d="M70 56 L108 10 L117 15 L82 62z"/>
-              <!-- arm -->
-              <path d="M108 9 L141 38 L135 44 L106 18z"/>
-              <!-- hydraulic cylinder -->
-              <path d="M78 46 L101 21" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
-              <!-- bucket -->
-              <path d="M135 38 L152 46 L150 66 L140 72 L128 64 L132 58 L140 62 L143 50 L133 45z"/>
-              <path d="M140 72 l-3 4 M146 69 l-1 5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
-            </svg>
-          </div>
+          <div class="logo" aria-hidden="true"></div>
           <div class="brand">
             <div class="sym" contenteditable="true" data-setting="symbol">உ</div>
             <div class="t1" contenteditable="true" data-setting="title1">STAR</div>
@@ -312,6 +327,21 @@
       Type over any calculated value to change it; press ↺ to go back to the automatic figure.
       Template: <b id="tplName"></b> (change it in Templates).
     </div>
+
+    <details class="panel no-print" id="headingPanel">
+      <summary>Heading alignment &amp; logo</summary>
+      <div class="ctl"><span>Logo position</span>
+        <div class="seg" data-key="logoPos"><button data-v="left">Left</button><button data-v="right">Right</button><button data-v="top">Above title</button><button data-v="none">No logo</button></div></div>
+      <div class="ctl"><span>Title alignment</span>
+        <div class="seg" data-key="titleAlign"><button data-v="left">Left</button><button data-v="center">Centre</button><button data-v="right">Right</button></div></div>
+      <div class="ctl"><span>Name &amp; phone alignment</span>
+        <div class="seg" data-key="contactAlign"><button data-v="auto">Auto</button><button data-v="left">Left</button><button data-v="center">Centre</button><button data-v="right">Right</button></div></div>
+      <div class="ctl"><span>Title size</span>
+        <div class="seg" data-key="titleSize"><button data-v="s">Small</button><button data-v="m">Medium</button><button data-v="l">Large</button></div></div>
+      <div class="ctl"><span>Logo (15 designs)</span></div>
+      <div class="logo-grid" id="logoGrid"></div>
+      <div style="margin-top:12px"><button id="btnResetAlign">Reset alignment</button></div>
+    </details>
 
     <div class="panel no-print" id="billReview">
       <h2>Party review for this bill</h2>
@@ -484,6 +514,113 @@
     el.addEventListener('click', e => e.preventDefault()); // don't jump into the input
   });
   applyText();
+
+  // ---------- 15 logos (all drawn in the template's ink colour) ----------
+  const P = 'fill="var(--paper)"';
+  const wheel = (x, y, r) => '<circle cx="' + x + '" cy="' + y + '" r="' + r + '"/><circle cx="' + x + '" cy="' + y + '" r="' + (r * 0.45) + '" ' + P + '/>';
+  const EXCAVATOR =
+    '<rect x="6" y="74" width="92" height="20" rx="10"/>' +
+    '<circle cx="17" cy="84" r="5.5" ' + P + '/><circle cx="35" cy="84" r="3.5" ' + P + '/><circle cx="52" cy="84" r="3.5" ' + P + '/><circle cx="69" cy="84" r="3.5" ' + P + '/><circle cx="87" cy="84" r="5.5" ' + P + '/>' +
+    '<rect x="30" y="68" width="44" height="7"/><path d="M6 50 h74 v20 H10 a4 4 0 0 1 -4 -4z"/>' +
+    '<path d="M52 24 h22 l6 26 H52z"/><path d="M56 28 h15 l4 18 H56z" ' + P + ' opacity=".85"/><rect x="20" y="40" width="4" height="10"/>' +
+    '<path d="M70 56 L108 10 L117 15 L82 62z"/><path d="M108 9 L141 38 L135 44 L106 18z"/>' +
+    '<path d="M78 46 L101 21" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>' +
+    '<path d="M135 38 L152 46 L150 66 L140 72 L128 64 L132 58 L140 62 L143 50 L133 45z"/>' +
+    '<path d="M140 72 l-3 4 M146 69 l-1 5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>';
+  const LOGOS = [
+    { id: 'excavator', name: 'Excavator', svg: EXCAVATOR },
+    { id: 'backhoe', name: 'Backhoe loader', svg:
+      '<path d="M28 56 h96 v16 H28z"/><path d="M30 42 h40 v14 H30z"/><rect x="44" y="30" width="4" height="12"/>' +
+      '<path d="M72 18 h30 l4 38 H72z"/><path d="M76 22 h22 l3 26 H76z" ' + P + ' opacity=".85"/>' +
+      wheel(42, 80, 13) + wheel(102, 74, 19) +
+      '<path d="M32 52 L12 60 L14 64 L34 58z"/><path d="M0 50 h18 v24 H4 l-4 -6z"/>' +
+      '<path d="M120 60 L138 20 L146 24 L128 64z"/><path d="M138 19 L156 40 L150 45 L134 25z"/><path d="M149 40 l9 5 l-3 15 l-12 -6z"/>' },
+    { id: 'dozer', name: 'Bulldozer', svg:
+      '<rect x="22" y="72" width="104" height="22" rx="11"/>' +
+      '<circle cx="34" cy="83" r="6" ' + P + '/><circle cx="56" cy="83" r="4" ' + P + '/><circle cx="76" cy="83" r="4" ' + P + '/><circle cx="96" cy="83" r="4" ' + P + '/><circle cx="114" cy="83" r="6" ' + P + '/>' +
+      '<path d="M30 50 h96 v22 H30z"/><path d="M70 20 h34 v30 H70z"/><path d="M75 25 h24 v18 H75z" ' + P + ' opacity=".85"/>' +
+      '<rect x="44" y="36" width="5" height="14"/><path d="M4 36 q12 28 0 58 h12 v-58z"/>' +
+      '<path d="M14 66 L32 60" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>' +
+      '<path d="M126 60 L146 74 L144 92 L138 92 L138 78 L124 70z"/>' },
+    { id: 'tipper', name: 'Tipper lorry', svg:
+      '<path d="M14 26 L104 34 L104 68 L20 68z"/><path d="M110 38 h24 l16 18 v20 h-40z"/><path d="M116 43 h16 l10 12 h-26z" ' + P + ' opacity=".85"/>' +
+      '<rect x="12" y="68" width="138" height="9"/>' + wheel(38, 82, 12) + wheel(64, 82, 12) + wheel(130, 82, 12) },
+    { id: 'crane', name: 'Tower crane', svg:
+      '<path d="M66 20 h12 v70 h-12z"/><path d="M68 26 l8 10 M76 36 l-8 10 M68 46 l8 10 M76 56 l-8 10 M68 66 l8 10" stroke="var(--paper)" stroke-width="2"/>' +
+      '<path d="M8 16 h148 v7 H8z"/><path d="M66 16 L72 2 L78 16z"/><rect x="10" y="23" width="24" height="12"/>' +
+      '<path d="M132 23 v32" stroke="currentColor" stroke-width="2.5"/><rect x="126" y="55" width="12" height="8"/>' +
+      '<path d="M132 63 v6 a4 4 0 1 1 -5 4" fill="none" stroke="currentColor" stroke-width="3"/>' +
+      '<rect x="78" y="23" width="16" height="12"/><rect x="48" y="88" width="48" height="8"/>' },
+    { id: 'roller', name: 'Road roller', svg:
+      '<rect x="6" y="56" width="52" height="38" rx="19"/><rect x="14" y="70" width="36" height="10" rx="5" ' + P + ' opacity=".5"/>' +
+      '<path d="M50 48 h78 v26 H50z"/><path d="M84 14 h44 v6 H84z"/><rect x="88" y="20" width="4" height="28"/><rect x="120" y="20" width="4" height="28"/>' +
+      '<path d="M98 38 h14 v10 h-14z"/>' + wheel(124, 78, 15) + '<rect x="60" y="36" width="5" height="12"/>' },
+    { id: 'loader', name: 'Wheel loader', svg:
+      '<path d="M50 50 h90 v22 H50z"/><path d="M98 16 h30 v34 H98z"/><path d="M103 21 h20 v22 H103z" ' + P + ' opacity=".85"/>' +
+      '<rect x="134" y="36" width="5" height="14"/>' + wheel(66, 80, 15) + wheel(124, 80, 15) +
+      '<path d="M56 58 L22 46 L24 38 L60 50z"/><path d="M2 30 h24 v32 H6 l-6 -10z"/>' },
+    { id: 'tractor', name: 'Tractor', svg:
+      '<path d="M28 52 h66 v22 H28z"/><path d="M90 18 h34 v36 H90z"/><path d="M95 23 h24 v24 H95z" ' + P + ' opacity=".85"/>' +
+      '<rect x="44" y="32" width="5" height="20"/>' + wheel(42, 80, 13) + wheel(112, 70, 25) +
+      '<path d="M134 64 h18 v6 h-18z"/>' },
+    { id: 'mini', name: 'Mini excavator', svg:
+      '<rect x="22" y="74" width="72" height="18" rx="9"/><circle cx="32" cy="83" r="4.5" ' + P + '/><circle cx="58" cy="83" r="3.5" ' + P + '/><circle cx="84" cy="83" r="4.5" ' + P + '/>' +
+      '<rect x="6" y="70" width="12" height="22"/><path d="M14 78 L24 80" stroke="currentColor" stroke-width="4"/>' +
+      '<path d="M26 54 h54 v20 H26z"/><rect x="44" y="24" width="4" height="30"/><rect x="68" y="24" width="4" height="30"/><path d="M40 18 h36 v6 H40z"/>' +
+      '<path d="M76 62 L106 28 L114 32 L86 68z"/><path d="M106 27 L130 48 L124 54 L102 34z"/><path d="M124 48 l16 6 l-3 16 l-15 -5z"/>' },
+    { id: 'star', name: 'Star badge', svg:
+      '<circle cx="80" cy="50" r="46"/><circle cx="80" cy="50" r="40" fill="none" stroke="var(--paper)" stroke-width="2"/>' +
+      '<polygon points="80,16 88.2,38.7 112.3,39.5 93.3,54.3 100,77.5 80,64 60,77.5 66.7,54.3 47.7,39.5 71.8,38.7" ' + P + '/>' },
+    { id: 'tanker', name: 'Water tanker', svg:
+      '<rect x="12" y="34" width="94" height="34" rx="17"/><path d="M30 40 v22 M50 40 v22 M70 40 v22 M90 40 v22" stroke="var(--paper)" stroke-width="2" opacity=".6"/>' +
+      '<path d="M110 38 h24 l16 18 v20 h-40z"/><path d="M116 43 h16 l10 12 h-26z" ' + P + ' opacity=".85"/>' +
+      '<rect x="10" y="68" width="140" height="9"/>' + wheel(36, 82, 12) + wheel(62, 82, 12) + wheel(130, 82, 12) },
+    { id: 'helmet', name: 'Safety helmet', svg:
+      '<path d="M34 72 Q34 20 80 20 Q126 20 126 72z"/><rect x="20" y="70" width="120" height="12" rx="6"/>' +
+      '<path d="M72 21 h16 v49 h-16z" ' + P + ' opacity=".35"/><path d="M50 30 q-8 16 -8 40" stroke="var(--paper)" stroke-width="3" fill="none" opacity=".5"/>' },
+    { id: 'shovel', name: 'Shovel & earth', svg:
+      '<path d="M4 96 Q80 44 156 96z"/><path d="M116 6 L82 64" stroke="currentColor" stroke-width="7" stroke-linecap="round"/>' +
+      '<path d="M108 4 h20 v8 h-20z" transform="rotate(30 118 8)"/><path d="M70 56 l22 13 l-10 18 q-12 6 -22 -2 q-2 -12 10 -29z"/>' },
+    { id: 'quarry', name: 'Hills & quarry', svg:
+      '<circle cx="128" cy="22" r="12"/><path d="M4 94 L54 30 L80 62 L102 40 L156 94z"/>' +
+      '<path d="M54 30 L44 43 L52 40 L58 46 L64 38z" ' + P + '/><path d="M102 40 L94 50 L101 48 L108 53z" ' + P + '/>' +
+      '<path d="M30 86 h100" stroke="var(--paper)" stroke-width="3" stroke-dasharray="10 6"/>' },
+    { id: 'badge', name: 'Excavator badge', svg:
+      '<circle cx="80" cy="50" r="48"/><circle cx="80" cy="50" r="42" fill="none" stroke="var(--paper)" stroke-width="2"/>' +
+      '<g transform="translate(41 25) scale(.5)" fill="var(--paper)" style="color:var(--paper)">' + EXCAVATOR.split('var(--paper)').join('currentColor').replace(/fill="currentColor"/g, 'fill="var(--ink)"') + '</g>' }
+  ];
+  const logoSvg = (id) => '<svg viewBox="0 0 160 100" fill="currentColor" xmlns="http://www.w3.org/2000/svg">' + (LOGOS.find(l => l.id === id) || LOGOS[0]).svg + '</svg>';
+
+  const HEAD_DEFAULTS = { logo: 'excavator', logoPos: 'left', titleAlign: 'center', contactAlign: 'auto', titleSize: 'm' };
+  Object.keys(HEAD_DEFAULTS).forEach(k => { if (settings[k] == null) settings[k] = HEAD_DEFAULTS[k]; });
+
+  function applyHeading() {
+    const slip = $('slip');
+    slip.querySelector('.logo').innerHTML = logoSvg(settings.logo);
+    slip.dataset.logoPos = settings.logoPos;
+    slip.dataset.titleAlign = settings.titleAlign;
+    slip.dataset.contactAlign = settings.contactAlign;
+    slip.dataset.titleSize = settings.titleSize;
+    document.querySelectorAll('#headingPanel .seg').forEach(seg =>
+      seg.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.v === settings[seg.dataset.key])));
+    document.querySelectorAll('#logoGrid .logo-opt').forEach(b => b.classList.toggle('active', b.dataset.logo === settings.logo));
+  }
+  $('logoGrid').innerHTML = LOGOS.map((l, i) =>
+    '<button type="button" class="logo-opt" data-logo="' + l.id + '">' + logoSvg(l.id) + '<span>' + (i + 1) + '. ' + l.name + '</span></button>').join('');
+  $('logoGrid').addEventListener('click', e => {
+    const b = e.target.closest('.logo-opt'); if (!b) return;
+    settings.logo = b.dataset.logo; store(SETTINGS_KEY, settings); applyHeading();
+    flash('Logo changed to ' + b.textContent.replace(/^\d+\.\s*/, '') + '.');
+  });
+  document.querySelectorAll('#headingPanel .seg').forEach(seg => seg.addEventListener('click', e => {
+    const v = e.target.dataset.v; if (!v) return;
+    settings[seg.dataset.key] = v; store(SETTINGS_KEY, settings); applyHeading();
+  }));
+  $('btnResetAlign').addEventListener('click', () => {
+    ['logoPos', 'titleAlign', 'contactAlign', 'titleSize'].forEach(k => settings[k] = HEAD_DEFAULTS[k]);
+    store(SETTINGS_KEY, settings); applyHeading(); flash('Heading alignment reset.');
+  });
+  applyHeading();
 
   // ---------- Bills ----------
   let bills = load(BILLS_KEY, []);
@@ -861,7 +998,7 @@
       bills = d.bills; reviews = Array.isArray(d.reviews) ? d.reviews : [];
       if (d.settings) settings = Object.assign(settings, d.settings);
       store(BILLS_KEY, bills); store(REVIEWS_KEY, reviews); store(SETTINGS_KEY, settings);
-      applyText(); renderRegister(); updateParties(); newBill(); flash('Backup restored.');
+      applyText(); applyHeading(); renderRegister(); updateParties(); newBill(); flash('Backup restored.');
     }).catch(() => flash('That file is not a valid backup.', true));
     e.target.value = '';
   });
