@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Star Earth Movers Billing</title>
+<style>
+  :root {
+    --paper: #f9c6d3;
+    --paper-edge: #f3b3c4;
+    --ink: #3b2a6b;
+    --ink-soft: #5a4a8c;
+    --hand: #1f2a55;
+    --bg: #2b2734;
+    --panel: #ffffff;
+    --text: #222;
+    --muted: #666;
+    --accent: #3b2a6b;
+    --danger: #b3261e;
+    --ok: #1e7b3a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: Arial, Helvetica, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+  .toolbar {
+    position: sticky; top: 0; z-index: 10;
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    padding: 10px 16px;
+    background: #1d1a24; color: #fff;
+  }
+  .toolbar h1 { font-size: 16px; margin: 0 12px 0 0; font-weight: 600; }
+  .toolbar .spacer { flex: 1; }
+  button, .btn {
+    font: inherit; font-size: 14px;
+    padding: 8px 14px; border-radius: 6px; border: 1px solid transparent;
+    background: #fff; color: var(--accent); cursor: pointer;
+  }
+  button.primary { background: #7b5cff; color: #fff; }
+  button.danger { background: var(--danger); color: #fff; }
+  button.ghost { background: transparent; color: #fff; border-color: #ffffff55; }
+  button.tab.active { background: #7b5cff; color: #fff; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 20px 16px 60px; }
+  .status { min-height: 20px; color: #cfe; font-size: 13px; margin-bottom: 8px; }
+
+  /* ---------- Bill slip ---------- */
+  .slip {
+    background: var(--paper);
+    padding: 18px;
+    border-radius: 2px;
+    box-shadow: 0 6px 24px #0007;
+    color: var(--ink);
+  }
+  .frame { border: 2px solid var(--ink); }
+  .head {
+    position: relative;
+    display: grid; grid-template-columns: 110px 1fr 190px; align-items: center;
+    padding: 10px 12px; border-bottom: 2px solid var(--ink);
+    min-height: 150px;
+  }
+  .head svg { width: 100%; height: auto; }
+  .brand { text-align: center; font-family: "Times New Roman", Georgia, serif; font-weight: 700; }
+  .brand .t1 { font-size: 44px; letter-spacing: 1px; }
+  .brand .t2 { font-size: 34px; letter-spacing: 1px; }
+  .brand .sym { font-size: 16px; }
+  .owner { text-align: right; font-weight: 700; font-size: 17px; line-height: 1.5; }
+  .owner .name { font-size: 22px; }
+
+  [contenteditable] { outline: none; border-radius: 3px; }
+  [contenteditable]:hover { background: #ffffff55; }
+  [contenteditable]:focus { background: #ffffff99; box-shadow: 0 0 0 1px var(--ink-soft); }
+
+  .meta { padding: 12px 14px 10px; border-bottom: 2px solid var(--ink); }
+  .row { display: flex; align-items: baseline; gap: 8px; margin: 6px 0; }
+  .row label { font-size: 17px; white-space: nowrap; }
+  .between { justify-content: space-between; flex-wrap: wrap; }
+
+  input.line, textarea.line {
+    flex: 1; min-width: 0;
+    font-family: "Segoe Print", "Comic Sans MS", "Bradley Hand", cursive;
+    font-size: 19px; color: var(--hand);
+    background: transparent; border: none;
+    border-bottom: 2px dotted var(--ink);
+    padding: 2px 4px;
+  }
+  input.line:focus, textarea.line:focus { outline: none; background: #ffffff77; }
+  textarea.line { resize: none; height: 32px; width: 100%; }
+  #billNo { max-width: 120px; border-bottom-style: none; font-size: 24px; }
+  #billDate { max-width: 200px; }
+
+  .body { padding: 30px 40px 20px; }
+  .field { display: grid; grid-template-columns: 170px 14px 1fr 34px; align-items: baseline; margin: 18px 0; }
+  .field label { font-size: 18px; }
+  .field .colon { font-size: 18px; }
+  .field .auto {
+    font-size: 11px; color: var(--ink-soft); background: none; border: none;
+    padding: 0 0 0 6px; cursor: pointer; visibility: hidden;
+  }
+  .field.manual .auto { visibility: visible; }
+  .field.computed input.line { border-bottom-style: dashed; }
+
+  .sign { display: flex; justify-content: space-between; padding: 40px 40px 14px; font-size: 18px; }
+  .sign div { text-align: center; }
+  .sign input.line { display: block; width: 180px; margin-bottom: 4px; text-align: center; }
+
+  .hint { color: #ddd; font-size: 12px; margin-top: 10px; line-height: 1.5; }
+
+  /* ---------- Register ---------- */
+  .panel { background: var(--panel); border-radius: 8px; padding: 16px; }
+  .panel h2 { margin: 0 0 12px; font-size: 18px; color: var(--accent); }
+  .filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .filters input { padding: 8px; border: 1px solid #ccc; border-radius: 6px; font: inherit; flex: 1; min-width: 140px; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { padding: 8px 6px; border-bottom: 1px solid #eee; text-align: left; white-space: nowrap; }
+  th { background: #f6f3ff; color: var(--accent); }
+  td.num, th.num { text-align: right; }
+  tr:hover td { background: #faf8ff; }
+  tfoot td { font-weight: 700; border-top: 2px solid var(--accent); }
+  .row-actions button { padding: 4px 8px; font-size: 12px; border: 1px solid #ccc; }
+  .empty { color: var(--muted); padding: 20px; text-align: center; }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; }
+  .pill.due { background: #fde7e7; color: var(--danger); }
+  .pill.paid { background: #e3f6e9; color: var(--ok); }
+
+  .settings label { display: block; margin: 10px 0 4px; font-size: 13px; color: var(--muted); }
+  .settings input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font: inherit; }
+
+  .hidden { display: none !important; }
+
+  @media (max-width: 640px) {
+    .head { grid-template-columns: 70px 1fr; }
+    .owner { grid-column: 1 / -1; text-align: center; font-size: 15px; }
+    .owner .name { font-size: 18px; }
+    .brand .t1 { font-size: 32px; } .brand .t2 { font-size: 22px; }
+    .body { padding: 16px 10px; }
+    .field { grid-template-columns: 120px 10px 1fr 28px; }
+    .field label, .row label { font-size: 15px; }
+    .sign { padding: 30px 10px 10px; font-size: 14px; }
+    .sign input.line { width: 130px; }
+    input.line { font-size: 17px; }
+  }
+
+  @media print {
+    @page { size: A5 portrait; margin: 8mm; }
+    body { background: #fff; }
+    .toolbar, .status, .hint, #registerView, #settingsView, .auto { display: none !important; }
+    .wrap { padding: 0; max-width: none; }
+    .slip { box-shadow: none; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    [contenteditable]:hover { background: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <h1>Billing</h1>
+  <button class="tab active" data-view="billView">Bill Entry</button>
+  <button class="tab" data-view="registerView">All Bills</button>
+  <button class="tab" data-view="settingsView">Settings</button>
+  <span class="spacer"></span>
+  <span id="billActions">
+    <button class="ghost" id="btnNew">New</button>
+    <button class="primary" id="btnSave">Save</button>
+    <button class="ghost" id="btnPrint">Print</button>
+    <button class="danger hidden" id="btnDelete">Delete</button>
+  </span>
+</div>
+
+<div class="wrap">
+  <div class="status" id="status"></div>
+
+  <!-- ================= BILL ENTRY ================= -->
+  <section id="billView">
+    <div class="slip">
+      <div class="frame">
+        <div class="head">
+          <!-- simple backhoe loader drawing -->
+          <svg viewBox="0 0 120 80" aria-hidden="true" fill="none" stroke="#3b2a6b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="48" y="22" width="26" height="24" rx="2" fill="#3b2a6b55"/>
+            <path d="M40 46 H100 V36 H74"/>
+            <path d="M100 40 L114 44 L112 56 H100"/>
+            <path d="M48 26 L28 8 L10 22 L6 38"/>
+            <path d="M6 38 L14 44 L18 34"/>
+            <circle cx="56" cy="60" r="12" fill="#3b2a6b"/>
+            <circle cx="96" cy="64" r="8" fill="#3b2a6b"/>
+          </svg>
+          <div class="brand">
+            <div class="sym" contenteditable="true" data-setting="symbol">உ</div>
+            <div class="t1" contenteditable="true" data-setting="title1">STAR</div>
+            <div class="t2" contenteditable="true" data-setting="title2">EARTH MOVERS</div>
+          </div>
+          <div class="owner">
+            <div class="name" contenteditable="true" data-setting="owner">G. Sridharan</div>
+            <div contenteditable="true" data-setting="phone1">Cell : 70253 75005</div>
+            <div contenteditable="true" data-setting="phone2">99761 99016</div>
+          </div>
+        </div>
+
+        <div class="meta">
+          <div class="row between">
+            <div class="row"><label for="billNo">No.</label><input class="line" id="billNo" inputmode="numeric"></div>
+            <div class="row"><label for="billDate">Date</label><input class="line" id="billDate" type="date"></div>
+          </div>
+          <div class="row"><label for="party">M/s.</label><input class="line" id="party" list="partyList" autocomplete="off"></div>
+          <div class="row"><input class="line" id="address" placeholder=""></div>
+          <datalist id="partyList"></datalist>
+        </div>
+
+        <div class="body">
+          <div class="field"><label for="startMeter" contenteditable="true" data-setting="lblStart">Starting Meeter</label><span class="colon">:</span><input class="line" id="startMeter" inputmode="decimal"><span></span></div>
+          <div class="field"><label for="closeMeter" contenteditable="true" data-setting="lblClose">Closing Meeter</label><span class="colon">:</span><input class="line" id="closeMeter" inputmode="decimal"><span></span></div>
+          <div class="field computed" data-calc="running"><label for="running" contenteditable="true" data-setting="lblRunning">Running</label><span class="colon">:</span><input class="line" id="running" inputmode="decimal"><button class="auto" title="Back to automatic">↺</button></div>
+          <div class="field computed" data-calc="total"><label for="total" contenteditable="true" data-setting="lblTotal">Total</label><span class="colon">:</span><input class="line" id="total" inputmode="decimal"><button class="auto" title="Back to automatic">↺</button></div>
+          <div class="field"><label for="rate" contenteditable="true" data-setting="lblRate">R / H</label><span class="colon">:</span><input class="line" id="rate" inputmode="decimal"><span></span></div>
+          <div class="field computed" data-calc="amount"><label for="amount" contenteditable="true" data-setting="lblAmount">Amount</label><span class="colon">:</span><input class="line" id="amount" inputmode="decimal"><button class="auto" title="Back to automatic">↺</button></div>
+          <div class="field"><label for="advance" contenteditable="true" data-setting="lblAdvance">Advance</label><span class="colon">:</span><input class="line" id="advance" inputmode="decimal"><span></span></div>
+          <div class="field computed" data-calc="balance"><label for="balance" contenteditable="true" data-setting="lblBalance">Balance</label><span class="colon">:</span><input class="line" id="balance" inputmode="decimal"><button class="auto" title="Back to automatic">↺</button></div>
+        </div>
+
+        <div class="sign">
+          <div><input class="line" id="operator"><span contenteditable="true" data-setting="lblOperator">Operator Signature</span></div>
+          <div><input class="line" id="partySign"><span contenteditable="true" data-setting="lblParty">Party Signature</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="hint">
+      Every field and every printed word on the slip can be edited — click the heading, phone numbers or labels to change them (saved automatically).
+      Running = Closing − Starting, Total = Running, Amount = Total × R/H, Balance = Amount − Advance.
+      You can type over any calculated value; press ↺ to go back to the automatic figure.
+    </div>
+  </section>
+
+  <!-- ================= REGISTER ================= -->
+  <section id="registerView" class="hidden">
+    <div class="panel">
+      <h2>All Bills</h2>
+      <div class="filters">
+        <input id="search" placeholder="Search party / bill no.">
+        <input id="fromDate" type="date" title="From date">
+        <input id="toDate" type="date" title="To date">
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>No.</th><th>Date</th><th>M/s.</th><th class="num">Hours</th><th class="num">R/H</th><th class="num">Amount</th><th class="num">Advance</th><th class="num">Balance</th><th></th><th></th></tr>
+          </thead>
+          <tbody id="billRows"></tbody>
+          <tfoot id="billFoot"></tfoot>
+        </table>
+      </div>
+      <div class="filters" style="margin-top:14px">
+        <button id="btnCsv">Export CSV</button>
+        <button id="btnBackup">Download Backup</button>
+        <label class="btn" style="border:1px solid #ccc">Restore Backup <input type="file" id="restoreFile" accept=".json" hidden></label>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= SETTINGS ================= -->
+  <section id="settingsView" class="hidden">
+    <div class="panel settings">
+      <h2>Settings</h2>
+      <label for="setNextNo">Next bill number</label>
+      <input id="setNextNo" inputmode="numeric">
+      <label for="setCurrency">Currency symbol</label>
+      <input id="setCurrency">
+      <label for="setOperator">Default operator name</label>
+      <input id="setOperator">
+      <p style="font-size:13px;color:#666">The heading, phone numbers and field labels are edited directly on the bill.</p>
+      <button class="primary" id="btnSaveSettings">Save Settings</button>
+      <button id="btnResetHeader">Reset heading &amp; labels to original</button>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  const BILLS_KEY = 'sem_bills_v1';
+  const SETTINGS_KEY = 'sem_settings_v1';
+  const $ = (id) => document.getElementById(id);
+
+  function load(key, fallback) {
+    try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
+    catch (e) { return fallback; }
+  }
+  function store(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); return true; }
+    catch (e) { flash('Could not save — browser storage is blocked.', true); return false; }
+  }
+
+  // ---------- Settings & editable header ----------
+  const defaultText = {};
+  document.querySelectorAll('[data-setting]').forEach(el => { defaultText[el.dataset.setting] = el.textContent; });
+
+  let settings = Object.assign({ nextNo: 50, currency: '₹', operator: '', text: {} }, load(SETTINGS_KEY, {}));
+  function applyText() {
+    document.querySelectorAll('[data-setting]').forEach(el => {
+      const k = el.dataset.setting;
+      el.textContent = settings.text[k] != null ? settings.text[k] : defaultText[k];
+    });
+  }
+  document.querySelectorAll('[data-setting]').forEach(el => {
+    el.addEventListener('input', () => { settings.text[el.dataset.setting] = el.textContent; store(SETTINGS_KEY, settings); });
+    el.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); el.blur(); } });
+    // clicking a label must not jump focus into the input
+    el.addEventListener('click', e => e.preventDefault());
+  });
+  applyText();
+
+  // ---------- Bills ----------
+  let bills = load(BILLS_KEY, []);
+  let currentId = null;
+
+  const FIELDS = ['billNo','billDate','party','address','startMeter','closeMeter','running','total','rate','amount','advance','balance','operator','partySign'];
+  const CALC = ['running','total','amount','balance'];
+
+  const num = (v) => { const n = parseFloat(String(v).replace(/,/g, '')); return isNaN(n) ? null : n; };
+  const fmt = (n) => (n == null ? '' : (Math.round(n * 100) / 100).toString());
+  const money = (n) => (n == null || n === '' ? '' : settings.currency + Number(n).toLocaleString('en-IN', { maximumFractionDigits: 2 }));
+  const today = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
+
+  function isManual(id) { return $(id).closest('.field').classList.contains('manual'); }
+  function setManual(id, on) { $(id).closest('.field').classList.toggle('manual', on); }
+
+  function recalc() {
+    const s = num($('startMeter').value), c = num($('closeMeter').value);
+    if (!isManual('running')) $('running').value = (s != null && c != null) ? fmt(c - s) : '';
+    if (!isManual('total')) $('total').value = $('running').value;
+    const t = num($('total').value), r = num($('rate').value);
+    if (!isManual('amount')) $('amount').value = (t != null && r != null) ? fmt(t * r) : '';
+    const a = num($('amount').value), adv = num($('advance').value);
+    if (!isManual('balance')) $('balance').value = a != null ? fmt(a - (adv || 0)) : '';
+  }
+
+  FIELDS.forEach(id => $(id).addEventListener('input', () => {
+    if (CALC.includes(id)) setManual(id, $(id).value.trim() !== '');
+    recalc();
+  }));
+  document.querySelectorAll('.auto').forEach(b => b.addEventListener('click', () => {
+    const inp = b.closest('.field').querySelector('input'); setManual(inp.id, false); recalc();
+  }));
+
+  function readForm() {
+    const o = {}; FIELDS.forEach(id => o[id] = $(id).value.trim());
+    o.manual = CALC.filter(isManual);
+    return o;
+  }
+  function fillForm(b) {
+    FIELDS.forEach(id => $(id).value = b[id] || '');
+    CALC.forEach(id => setManual(id, (b.manual || []).includes(id)));
+    recalc();
+  }
+
+  function newBill() {
+    currentId = null;
+    fillForm({ billNo: String(settings.nextNo), billDate: today(), operator: settings.operator });
+    $('btnDelete').classList.add('hidden');
+    updateParties();
+  }
+
+  function saveBill() {
+    const data = readForm();
+    if (!data.billNo) { flash('Enter a bill number.', true); return; }
+    if (!data.party) { flash('Enter the party name (M/s.).', true); $('party').focus(); return; }
+    const dup = bills.find(b => b.billNo === data.billNo && b.id !== currentId);
+    if (dup && !confirm('Bill No. ' + data.billNo + ' already exists. Save anyway?')) return;
+    if (currentId) {
+      const i = bills.findIndex(b => b.id === currentId);
+      bills[i] = Object.assign(bills[i], data, { updated: Date.now() });
+    } else {
+      currentId = 'b' + Date.now();
+      bills.push(Object.assign({ id: currentId, created: Date.now() }, data));
+      const n = parseInt(data.billNo, 10);
+      if (!isNaN(n) && n >= settings.nextNo) { settings.nextNo = n + 1; store(SETTINGS_KEY, settings); }
+    }
+    if (store(BILLS_KEY, bills)) {
+      flash('Bill No. ' + data.billNo + ' saved.');
+      $('btnDelete').classList.remove('hidden');
+      updateParties();
+    }
+  }
+
+  function deleteBill(id) {
+    const b = bills.find(x => x.id === id); if (!b) return;
+    if (!confirm('Delete Bill No. ' + b.billNo + ' (' + b.party + ')?')) return;
+    bills = bills.filter(x => x.id !== id); store(BILLS_KEY, bills);
+    flash('Bill deleted.');
+    if (id === currentId) newBill();
+    renderRegister();
+  }
+
+  function openBill(id) {
+    const b = bills.find(x => x.id === id); if (!b) return;
+    currentId = id; fillForm(b);
+    $('btnDelete').classList.remove('hidden');
+    showView('billView');
+  }
+
+  function updateParties() {
+    const names = [...new Set(bills.map(b => b.party).filter(Boolean))].sort();
+    $('partyList').innerHTML = names.map(n => '<option value="' + esc(n) + '">').join('');
+  }
+  $('party').addEventListener('change', () => {
+    if ($('address').value) return;
+    const last = [...bills].reverse().find(b => b.party === $('party').value && b.address);
+    if (last) $('address').value = last.address;
+  });
+
+  // ---------- Register ----------
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+  function fmtDate(d) { if (!d) return ''; const [y, m, dd] = d.split('-'); return dd + '-' + m + '-' + y; }
+
+  function filtered() {
+    const q = $('search').value.trim().toLowerCase(), f = $('fromDate').value, t = $('toDate').value;
+    return bills.filter(b =>
+      (!q || (b.party || '').toLowerCase().includes(q) || (b.billNo || '').toLowerCase().includes(q)) &&
+      (!f || b.billDate >= f) && (!t || b.billDate <= t)
+    ).sort((a, b) => (b.billDate || '').localeCompare(a.billDate || '') || (parseInt(b.billNo) || 0) - (parseInt(a.billNo) || 0));
+  }
+
+  function renderRegister() {
+    const list = filtered();
+    if (!list.length) {
+      $('billRows').innerHTML = '<tr><td colspan="10" class="empty">No bills yet.</td></tr>';
+      $('billFoot').innerHTML = ''; return;
+    }
+    let tH = 0, tA = 0, tAdv = 0, tBal = 0;
+    $('billRows').innerHTML = list.map(b => {
+      tH += num(b.total) || 0; tA += num(b.amount) || 0; tAdv += num(b.advance) || 0; tBal += num(b.balance) || 0;
+      const bal = num(b.balance) || 0;
+      return '<tr>' +
+        '<td>' + esc(b.billNo) + '</td><td>' + fmtDate(b.billDate) + '</td><td>' + esc(b.party) + '</td>' +
+        '<td class="num">' + esc(b.total) + '</td><td class="num">' + esc(b.rate) + '</td>' +
+        '<td class="num">' + money(b.amount) + '</td><td class="num">' + money(b.advance) + '</td>' +
+        '<td class="num">' + money(b.balance) + '</td>' +
+        '<td>' + (bal > 0 ? '<span class="pill due">Due</span>' : '<span class="pill paid">Paid</span>') + '</td>' +
+        '<td class="row-actions"><button data-open="' + b.id + '">Open</button> <button data-del="' + b.id + '">✕</button></td>' +
+        '</tr>';
+    }).join('');
+    $('billFoot').innerHTML = '<tr><td colspan="3">' + list.length + ' bill(s)</td><td class="num">' + fmt(tH) +
+      '</td><td></td><td class="num">' + money(tA) + '</td><td class="num">' + money(tAdv) + '</td><td class="num">' + money(tBal) + '</td><td colspan="2"></td></tr>';
+  }
+  $('billRows').addEventListener('click', e => {
+    const o = e.target.dataset.open, d = e.target.dataset.del;
+    if (o) openBill(o); if (d) deleteBill(d);
+  });
+  ['search', 'fromDate', 'toDate'].forEach(id => $(id).addEventListener('input', renderRegister));
+
+  function download(name, text, type) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], { type }));
+    a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+  $('btnCsv').addEventListener('click', () => {
+    const cols = ['billNo','billDate','party','address','startMeter','closeMeter','running','total','rate','amount','advance','balance','operator'];
+    const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+    const csv = [cols.join(',')].concat(filtered().map(b => cols.map(c => q(b[c])).join(','))).join('\n');
+    download('bills-' + today() + '.csv', '﻿' + csv, 'text/csv');
+  });
+  $('btnBackup').addEventListener('click', () => download('bills-backup-' + today() + '.json', JSON.stringify({ bills, settings }, null, 2), 'application/json'));
+  $('restoreFile').addEventListener('change', e => {
+    const f = e.target.files[0]; if (!f) return;
+    f.text().then(t => {
+      const d = JSON.parse(t);
+      if (!Array.isArray(d.bills)) throw new Error('bad file');
+      if (!confirm('Replace current ' + bills.length + ' bill(s) with ' + d.bills.length + ' from backup?')) return;
+      bills = d.bills; if (d.settings) settings = Object.assign(settings, d.settings);
+      store(BILLS_KEY, bills); store(SETTINGS_KEY, settings);
+      applyText(); renderRegister(); updateParties(); flash('Backup restored.');
+    }).catch(() => flash('That file is not a valid backup.', true));
+    e.target.value = '';
+  });
+
+  // ---------- Settings view ----------
+  function loadSettingsForm() {
+    $('setNextNo').value = settings.nextNo; $('setCurrency').value = settings.currency; $('setOperator').value = settings.operator;
+  }
+  $('btnSaveSettings').addEventListener('click', () => {
+    const n = parseInt($('setNextNo').value, 10);
+    if (!isNaN(n)) settings.nextNo = n;
+    settings.currency = $('setCurrency').value; settings.operator = $('setOperator').value;
+    store(SETTINGS_KEY, settings); flash('Settings saved.');
+    if (!currentId) newBill();
+  });
+  $('btnResetHeader').addEventListener('click', () => {
+    if (!confirm('Reset the heading, phone numbers and labels to the original text?')) return;
+    settings.text = {}; store(SETTINGS_KEY, settings); applyText(); flash('Heading reset.');
+  });
+
+  // ---------- Navigation ----------
+  function showView(v) {
+    ['billView', 'registerView', 'settingsView'].forEach(id => $(id).classList.toggle('hidden', id !== v));
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === v));
+    $('billActions').classList.toggle('hidden', v !== 'billView');
+    if (v === 'registerView') renderRegister();
+    if (v === 'settingsView') loadSettingsForm();
+  }
+  document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => showView(t.dataset.view)));
+
+  let flashTimer;
+  function flash(msg, bad) {
+    const s = $('status'); s.textContent = msg; s.style.color = bad ? '#ffb4b4' : '#b8f5c8';
+    clearTimeout(flashTimer); flashTimer = setTimeout(() => s.textContent = '', 3500);
+  }
+
+  $('btnNew').addEventListener('click', newBill);
+  $('btnSave').addEventListener('click', saveBill);
+  $('btnPrint').addEventListener('click', () => window.print());
+  $('btnDelete').addEventListener('click', () => currentId && deleteBill(currentId));
+  document.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); saveBill(); } });
+
+  newBill();
+})();
+</script>
+</body>
+</html>
