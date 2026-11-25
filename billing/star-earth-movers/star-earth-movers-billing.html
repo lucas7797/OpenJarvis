@@ -116,9 +116,31 @@
   .field.manual .auto { visibility: visible; }
   .field.computed .line { border-bottom-style: dashed; }
 
-  .sign { display: flex; justify-content: space-between; padding: 40px 40px 14px; font-size: 18px; }
-  .sign > div { text-align: center; }
+  .sign { display: flex; justify-content: space-between; align-items: flex-end; padding: 14px 40px 14px; font-size: 18px; }
+  .sign > div { text-align: center; display: flex; flex-direction: column; align-items: center; }
   .sign .line { width: 180px; margin-bottom: 4px; text-align: center; }
+  .sig-area { height: 70px; width: 200px; display: flex; align-items: flex-end; justify-content: center; }
+  .sig-img { max-height: 70px; max-width: 200px; display: none; }
+  .sig-img[src] { display: block; }
+  .sig-btn { font-size: 12px; padding: 3px 10px; margin: 2px 0 4px; background: #ffffffaa; border: 1px dashed var(--ink); color: var(--ink); }
+
+  /* ---------- Modals (preview + signature pad) ---------- */
+  .modal { position: fixed; inset: 0; z-index: 50; background: #000b; display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .modal-box { background: #fff; border-radius: 10px; width: 100%; max-width: 720px; max-height: calc(100vh - 32px); display: flex; flex-direction: column; overflow: hidden; }
+  .modal-head { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid #eee; color: var(--accent); font-size: 17px; }
+  .modal-head button { border: 1px solid #ccc; padding: 4px 10px; }
+  .modal-body { overflow: auto; padding: 12px; background: #e9e7ef; text-align: center; }
+  .modal-foot { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 16px; border-top: 1px solid #eee; align-items: center; }
+  .modal-foot button, .modal-foot .btn { border: 1px solid #ccc; }
+  .modal-foot .grow { flex: 1; }
+  #previewImg { max-width: 100%; box-shadow: 0 4px 16px #0004; background: #fff; }
+  .preview-loading { padding: 60px 0; color: #555; }
+  .sigpad { width: 100%; height: 230px; border: 2px dashed #bbb; border-radius: 8px; background: #fff; touch-action: none; display: block; cursor: crosshair; }
+  .sig-hint { font-size: 13px; color: #666; margin-top: 6px; }
+  .pen.active { background: #7b5cff; color: #fff; }
+  .pill.signed { background: #e8eefc; color: #1c2f6e; }
+  .saved-sig { display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 8px; border: 1px dashed #ccc; border-radius: 6px; background: #fff; }
+  .saved-sig img { max-height: 60px; max-width: 220px; }
 
   /* Layout: banner */
   .slip.layout-banner { --head-text: #fff; }
@@ -235,6 +257,7 @@
     .field label, .row label, .field .colon { font-size: 15px; }
     .sign { padding: 30px 10px 10px; font-size: 14px; }
     .sign .line { width: 130px; }
+    .sig-area { width: 140px; height: 56px; } .sig-img { max-width: 140px; max-height: 56px; }
     .line { font-size: 17px; }
     .slip.layout-boxed .body { padding: 14px 8px; }
   }
@@ -244,7 +267,14 @@
   @media print {
     @page { size: A5 portrait; margin: 8mm; }
     body { background: #fff; }
-    .toolbar, .status, .hint, .no-print, .auto { display: none !important; }
+    .toolbar, .status, .hint, .no-print, .auto, .sig-btn, .modal { display: none !important; }
+    /* printing from the preview window prints the preview image */
+    body.preview-open .wrap { display: none !important; }
+    body.preview-open #previewModal { display: block !important; position: static; background: none; padding: 0; }
+    body.preview-open #previewModal .modal-box { max-height: none; border-radius: 0; max-width: none; }
+    body.preview-open #previewModal .modal-head, body.preview-open #previewModal .modal-foot { display: none; }
+    body.preview-open #previewModal .modal-body { background: none; padding: 0; overflow: visible; }
+    body.preview-open #previewImg { box-shadow: none; width: 100%; }
     .wrap { padding: 0; max-width: none; }
     .slip { box-shadow: none; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     [contenteditable]:hover { background: none; }
@@ -264,6 +294,7 @@
   <span class="actions" id="billActions">
     <button class="ghost" id="btnNew">New</button>
     <button class="primary" id="btnSave">Save</button>
+    <button class="ghost" id="btnPreview">Preview</button>
     <button class="ghost" id="btnPdf">PDF</button>
     <button class="ghost" id="btnJpg">JPEG</button>
     <button class="ghost hidden" id="btnShare">Share</button>
@@ -314,8 +345,18 @@
         </div>
 
         <div class="sign">
-          <div><input class="line" id="operator"><span contenteditable="true" data-setting="lblOperator">Operator Signature</span></div>
-          <div><input class="line" id="partySign"><span contenteditable="true" data-setting="lblParty">Party Signature</span></div>
+          <div class="sig" data-who="operator">
+            <div class="sig-area"><img class="sig-img" alt=""></div>
+            <button type="button" class="sig-btn" data-sign="operator">✍ Sign</button>
+            <input class="line" id="operator" placeholder="">
+            <span contenteditable="true" data-setting="lblOperator">Operator Signature</span>
+          </div>
+          <div class="sig" data-who="party">
+            <div class="sig-area"><img class="sig-img" alt=""></div>
+            <button type="button" class="sig-btn" data-sign="party">✍ Sign</button>
+            <input class="line" id="partySign">
+            <span contenteditable="true" data-setting="lblParty">Party Signature</span>
+          </div>
         </div>
       </div>
     </div>
@@ -431,11 +472,56 @@
       <input id="setCurrency">
       <label for="setOperator">Default operator name</label>
       <input id="setOperator">
+      <label>My saved signature (operator)</label>
+      <div class="saved-sig"><img id="savedSigImg" alt="Saved signature" class="hidden"><span id="noSavedSig" style="font-size:13px;color:#666">None saved. Tap "✍ Sign" on a bill, sign, then press "Save as my signature".</span></div>
+      <label style="display:flex;gap:8px;align-items:center;color:#222;font-size:14px"><input type="checkbox" id="setAutoSign" style="width:auto"> Put my saved signature on every new bill automatically</label>
+      <button id="btnRemoveSavedSig">Remove saved signature</button>
       <p style="font-size:13px;color:#666">The heading, phone numbers and field labels are edited directly on the bill.</p>
       <button class="primary" id="btnSaveSettings">Save Settings</button>
       <button id="btnResetHeader">Reset heading &amp; labels to original</button>
     </div>
   </section>
+</div>
+
+<!-- ================= PREVIEW WINDOW ================= -->
+<div class="modal hidden" id="previewModal" role="dialog" aria-modal="true" aria-labelledby="previewTitle">
+  <div class="modal-box">
+    <div class="modal-head"><b id="previewTitle">Bill preview</b><button type="button" id="previewClose" aria-label="Close">✕</button></div>
+    <div class="modal-body"><div class="preview-loading" id="previewLoading">Preparing preview…</div><img id="previewImg" alt="Bill preview" class="hidden"></div>
+    <div class="modal-foot">
+      <button class="primary" id="pvPdf">Download PDF</button>
+      <button id="pvJpg">Download JPEG</button>
+      <button id="pvShare" class="hidden">Share</button>
+      <button id="pvPrint">Print</button>
+      <span class="grow"></span>
+      <button id="pvEdit">Edit bill</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= SIGNATURE PAD ================= -->
+<div class="modal hidden" id="signModal" role="dialog" aria-modal="true" aria-labelledby="signTitle">
+  <div class="modal-box">
+    <div class="modal-head"><b id="signTitle">Signature</b><button type="button" id="signClose" aria-label="Close">✕</button></div>
+    <div class="modal-body" style="background:#fff">
+      <canvas id="sigPad" class="sigpad"></canvas>
+      <div class="sig-hint">Sign inside the box with your finger or mouse.</div>
+      <div class="filters" style="justify-content:center;margin:10px 0 0">
+        <span style="font-size:13px;color:#666">Pen:</span>
+        <button type="button" class="pen active" data-pen="#1f2a55">Blue</button>
+        <button type="button" class="pen" data-pen="#111111">Black</button>
+        <button type="button" class="pen" data-pen="#b3261e">Red</button>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button id="sigClear">Clear</button>
+      <label class="btn">Upload photo<input type="file" id="sigUpload" accept="image/*" hidden></label>
+      <button id="sigUseSaved" class="hidden">Use my saved signature</button>
+      <button id="sigSaveDefault" class="hidden">Save as my signature</button>
+      <span class="grow"></span>
+      <button class="primary" id="sigDone">Done</button>
+    </div>
+  </div>
 </div>
 
 <div id="exportStage" aria-hidden="true"></div>
@@ -878,7 +964,10 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   }
   function store(key, value) {
     try { localStorage.setItem(key, JSON.stringify(value)); return true; }
-    catch (e) { flash('Could not save — browser storage is blocked.', true); return false; }
+    catch (e) {
+      flash(e && e.name === 'QuotaExceededError' ? 'Storage is full — download a backup, then delete old bills.' : 'Could not save — browser storage is blocked.', true);
+      return false;
+    }
   }
 
   // ---------- 15 templates ----------
@@ -922,7 +1011,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   const defaultText = {};
   document.querySelectorAll('[data-setting]').forEach(el => { defaultText[el.dataset.setting] = el.textContent; });
 
-  let settings = Object.assign({ nextNo: 50, currency: '₹', operator: '', text: {}, template: 'pink' }, load(SETTINGS_KEY, {}));
+  let settings = Object.assign({ nextNo: 50, currency: '₹', operator: '', text: {}, template: 'pink', defaultSig: '', autoSign: true }, load(SETTINGS_KEY, {}));
   function applyText() {
     document.querySelectorAll('#slip [data-setting]').forEach(el => {
       const k = el.dataset.setting;
@@ -1083,6 +1172,10 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     const o = {}; FIELDS.forEach(id => o[id] = $(id).value.trim());
     o.manual = CALC.filter(isManual);
     o.template = currentTpl;
+    // the operator's saved signature is stored once and referenced, to save space
+    o.sigOperator = sigs.operator && sigs.operator === settings.defaultSig ? '@default' : sigs.operator;
+    o.sigParty = sigs.party;
+    o.sigPartyAt = sigs.party ? (sigs.partyAt || Date.now()) : null;
     return o;
   }
   function setTemplate(id) {
@@ -1094,13 +1187,16 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     FIELDS.forEach(id => $(id).value = b[id] || '');
     CALC.forEach(id => setManual(id, (b.manual || []).includes(id)));
     setTemplate(b.template || settings.template);
+    setSig('operator', b.sigOperator === '@default' ? settings.defaultSig : b.sigOperator);
+    setSig('party', b.sigParty, b.sigPartyAt);
     recalc();
     renderBillReview();
   }
 
   function newBill() {
     currentId = null;
-    fillForm({ billNo: String(settings.nextNo), billDate: today(), operator: settings.operator });
+    fillForm({ billNo: String(settings.nextNo), billDate: today(), operator: settings.operator,
+      sigOperator: settings.autoSign && settings.defaultSig ? '@default' : '' });
     $('btnDelete').classList.add('hidden');
     updateParties();
   }
@@ -1167,10 +1263,10 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       const span = document.createElement('span');
       span.className = inp.className;
       const v = srcInputs[i].value;
-      span.textContent = srcInputs[i].type === 'date' ? fmtDate(v) : v;
+      span.textContent = (srcInputs[i].type === 'date' ? fmtDate(v) : v) || '\u200b'; // keep empty lines level
       inp.replaceWith(span);
     });
-    clone.querySelectorAll('.auto').forEach(el => el.remove());
+    clone.querySelectorAll('.auto, .sig-btn').forEach(el => el.remove());
     clone.querySelectorAll('[contenteditable]').forEach(el => el.removeAttribute('contenteditable'));
     clone.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
     clone.querySelectorAll('label').forEach(el => el.removeAttribute('for'));
@@ -1235,13 +1331,190 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   // Share (WhatsApp etc.) where the phone supports sharing files
   try {
     if (navigator.canShare && navigator.canShare({ files: [new File([''], 'x.jpg', { type: 'image/jpeg' })] })) {
-      $('btnShare').classList.remove('hidden');
+      $('btnShare').classList.remove('hidden'); $('pvShare').classList.remove('hidden');
     }
   } catch (e) { /* not supported */ }
   $('btnShare').addEventListener('click', e => withBusy(e.currentTarget, async () => {
     const file = new File([await makeJpgBlob()], fileBase() + '.jpg', { type: 'image/jpeg' });
     await navigator.share({ files: [file], title: fileBase() });
   }));
+
+  // ---------- Preview window ----------
+  async function openPreview() {
+    $('previewTitle').textContent = 'Preview — Bill No. ' + ($('billNo').value || '') + ($('party').value ? ' · ' + $('party').value : '');
+    $('previewImg').classList.add('hidden');
+    $('previewLoading').classList.remove('hidden');
+    $('previewModal').classList.remove('hidden');
+    document.body.classList.add('preview-open');
+    try {
+      const canvas = await renderCanvas();
+      $('previewImg').src = canvas.toDataURL('image/jpeg', 0.92);
+      $('previewImg').classList.remove('hidden');
+      $('previewLoading').classList.add('hidden');
+    } catch (e) {
+      $('previewLoading').textContent = 'Could not prepare the preview: ' + e.message;
+    }
+  }
+  function closePreview() {
+    $('previewModal').classList.add('hidden');
+    document.body.classList.remove('preview-open');
+    $('previewLoading').textContent = 'Preparing preview…';
+  }
+  function previewBill(id) {
+    const b = bills.find(x => x.id === id); if (!b) return;
+    currentId = id; fillForm(b);
+    $('btnDelete').classList.remove('hidden');
+    openPreview();
+  }
+  $('btnPreview').addEventListener('click', openPreview);
+  $('previewClose').addEventListener('click', closePreview);
+  $('previewModal').addEventListener('click', e => { if (e.target === $('previewModal')) closePreview(); });
+  $('pvEdit').addEventListener('click', () => { closePreview(); showView('billView'); });
+  $('pvPrint').addEventListener('click', () => window.print());
+  $('pvPdf').addEventListener('click', e => $('btnPdf').click());
+  $('pvJpg').addEventListener('click', e => $('btnJpg').click());
+  $('pvShare').addEventListener('click', e => $('btnShare').click());
+
+  // ---------- Signatures ----------
+  const sigs = { operator: '', party: '', partyAt: null };
+  function setSig(who, url, at) {
+    sigs[who] = url || '';
+    if (who === 'party') sigs.partyAt = url ? (at || sigs.partyAt || Date.now()) : null;
+    const box = document.querySelector('#slip .sig[data-who="' + who + '"]');
+    const img = box.querySelector('.sig-img');
+    if (url) img.src = url; else img.removeAttribute('src');
+    box.querySelector('.sig-btn').textContent = url ? '✍ Change signature' : '✍ Sign';
+  }
+
+  const pad = $('sigPad');
+  const pctx = pad.getContext('2d');
+  let signingFor = null, drawing = false, hasInk = false, penColor = '#1f2a55', last = null;
+
+  function sizePad() {
+    const r = pad.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+    pad.width = Math.round(r.width * dpr); pad.height = Math.round(r.height * dpr);
+    pctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    pctx.lineCap = 'round'; pctx.lineJoin = 'round';
+  }
+  function clearPad() { pctx.clearRect(0, 0, pad.width, pad.height); hasInk = false; }
+  function drawImageOnPad(url) {
+    return new Promise(res => {
+      const im = new Image();
+      im.onload = () => {
+        const r = pad.getBoundingClientRect(), m = 12;
+        const k = Math.min((r.width - m * 2) / im.width, (r.height - m * 2) / im.height, 1.5);
+        const w = im.width * k, h = im.height * k;
+        pctx.drawImage(im, (r.width - w) / 2, (r.height - h) / 2, w, h);
+        hasInk = true; res();
+      };
+      im.onerror = () => res();
+      im.src = url;
+    });
+  }
+  const pt = (e) => { const r = pad.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+  pad.addEventListener('pointerdown', e => {
+    e.preventDefault(); drawing = true; last = pt(e);
+    try { pad.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+    pctx.fillStyle = penColor; pctx.beginPath(); pctx.arc(last.x, last.y, 1.4, 0, Math.PI * 2); pctx.fill();
+    hasInk = true;
+  });
+  pad.addEventListener('pointermove', e => {
+    if (!drawing) return;
+    const p = pt(e);
+    pctx.strokeStyle = penColor; pctx.lineWidth = 2.8;
+    pctx.beginPath(); pctx.moveTo(last.x, last.y); pctx.lineTo(p.x, p.y); pctx.stroke();
+    last = p;
+  });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => pad.addEventListener(ev, () => { drawing = false; }));
+
+  // crop to the ink, shrink, return a small transparent PNG
+  function padToDataUrl() {
+    const w = pad.width, h = pad.height, d = pctx.getImageData(0, 0, w, h).data;
+    let x0 = w, y0 = h, x1 = -1, y1 = -1;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      if (d[(y * w + x) * 4 + 3] > 20) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    }
+    if (x1 < 0) return '';
+    const padPx = 6, cw = x1 - x0 + 1 + padPx * 2, ch = y1 - y0 + 1 + padPx * 2;
+    const k = Math.min(1, 400 / cw, 140 / ch);
+    const out = document.createElement('canvas');
+    out.width = Math.max(1, Math.round(cw * k)); out.height = Math.max(1, Math.round(ch * k));
+    out.getContext('2d').drawImage(pad, x0 - padPx, y0 - padPx, cw, ch, 0, 0, out.width, out.height);
+    return out.toDataURL('image/png');
+  }
+
+  async function openSign(who) {
+    signingFor = who;
+    $('signTitle').textContent = who === 'operator' ? 'Operator signature' : 'Party signature' + ($('party').value ? ' — ' + $('party').value : '');
+    $('sigUseSaved').classList.toggle('hidden', who !== 'operator' || !settings.defaultSig);
+    $('sigSaveDefault').classList.toggle('hidden', who !== 'operator');
+    $('signModal').classList.remove('hidden');
+    sizePad(); clearPad();
+    if (sigs[who]) await drawImageOnPad(sigs[who]);
+  }
+  function closeSign() { $('signModal').classList.add('hidden'); signingFor = null; }
+
+  document.querySelectorAll('#slip .sig-btn').forEach(b => b.addEventListener('click', () => openSign(b.dataset.sign)));
+  $('signClose').addEventListener('click', closeSign);
+  $('sigClear').addEventListener('click', clearPad);
+  document.querySelectorAll('.pen').forEach(b => b.addEventListener('click', () => {
+    penColor = b.dataset.pen;
+    document.querySelectorAll('.pen').forEach(x => x.classList.toggle('active', x === b));
+  }));
+  $('sigUseSaved').addEventListener('click', async () => { clearPad(); await drawImageOnPad(settings.defaultSig); });
+  $('sigSaveDefault').addEventListener('click', () => {
+    const url = hasInk ? padToDataUrl() : '';
+    if (!url) { flash('Sign in the box first.', true); return; }
+    settings.defaultSig = url; store(SETTINGS_KEY, settings);
+    $('sigUseSaved').classList.remove('hidden');
+    flash('Saved as your signature. It will be added to new bills automatically.');
+  });
+  // photo of a signature on paper: drop the light paper background
+  $('sigUpload').addEventListener('change', e => {
+    const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const im = new Image();
+      im.onload = async () => {
+        const k = Math.min(1, 1000 / im.width), c = document.createElement('canvas');
+        c.width = Math.round(im.width * k); c.height = Math.round(im.height * k);
+        const cx = c.getContext('2d'); cx.drawImage(im, 0, 0, c.width, c.height);
+        const data = cx.getImageData(0, 0, c.width, c.height), px = data.data;
+        for (let i = 0; i < px.length; i += 4) {
+          const lum = 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
+          if (lum > 170) px[i + 3] = 0; else px[i + 3] = Math.min(px[i + 3], Math.round((170 - lum) * 3));
+        }
+        cx.putImageData(data, 0, 0);
+        clearPad(); await drawImageOnPad(c.toDataURL('image/png'));
+      };
+      im.onerror = () => flash('That file is not an image.', true);
+      im.src = reader.result;
+    };
+    reader.readAsDataURL(f);
+  });
+  $('sigDone').addEventListener('click', () => {
+    const who = signingFor; if (!who) return;
+    const url = hasInk ? padToDataUrl() : '';
+    setSig(who, url, url ? Date.now() : null);
+    closeSign();
+    if (currentId) { if (saveBill()) flash(url ? 'Signature added and bill saved.' : 'Signature removed and bill saved.'); }
+    else flash(url ? 'Signature added — press Save to keep the bill.' : 'Signature removed.');
+  });
+
+  function renderSavedSig() {
+    const has = !!settings.defaultSig;
+    $('savedSigImg').classList.toggle('hidden', !has);
+    if (has) $('savedSigImg').src = settings.defaultSig; else $('savedSigImg').removeAttribute('src');
+    $('noSavedSig').classList.toggle('hidden', has);
+  }
+  $('btnRemoveSavedSig').addEventListener('click', () => {
+    if (!settings.defaultSig) { flash('No saved signature.'); return; }
+    if (!confirm('Remove your saved signature? Bills already saved keep their signature.')) return;
+    bills.forEach(b => { if (b.sigOperator === '@default') b.sigOperator = settings.defaultSig; });
+    store(BILLS_KEY, bills);
+    if (sigs.operator === settings.defaultSig && !currentId) setSig('operator', '');
+    settings.defaultSig = ''; store(SETTINGS_KEY, settings); renderSavedSig(); flash('Saved signature removed.');
+  });
 
   // ---------- Templates view ----------
   function renderTemplates() {
@@ -1384,9 +1657,10 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
         '<td class="num">' + esc(b.total) + '</td><td class="num">' + esc(b.rate) + '</td>' +
         '<td class="num">' + money(b.amount) + '</td><td class="num">' + money(b.advance) + '</td>' +
         '<td class="num">' + money(b.balance) + '</td>' +
-        '<td>' + (bal > 0 ? '<span class="pill due">Due</span>' : '<span class="pill paid">Paid</span>') + '</td>' +
+        '<td>' + (bal > 0 ? '<span class="pill due">Due</span>' : '<span class="pill paid">Paid</span>') +
+          (b.sigParty ? ' <span class="pill signed" title="Signed by party">✍ Signed</span>' : '') + '</td>' +
         '<td><span class="stars small">' + (r ? starText(r.rating) : '') + '</span></td>' +
-        '<td class="row-actions"><button data-open="' + b.id + '">Open</button> <button data-del="' + b.id + '">✕</button></td>' +
+        '<td class="row-actions"><button data-preview="' + b.id + '">Preview</button> <button data-open="' + b.id + '">Open</button> <button data-del="' + b.id + '">✕</button></td>' +
         '</tr>';
     }).join('');
     $('billFoot').innerHTML = '<tr><td colspan="3">' + list.length + ' bill(s)</td><td class="num">' + fmt(tH) +
@@ -1395,6 +1669,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   $('billRows').addEventListener('click', e => {
     if (e.target.dataset.open) openBill(e.target.dataset.open);
     if (e.target.dataset.del) deleteBill(e.target.dataset.del);
+    if (e.target.dataset.preview) previewBill(e.target.dataset.preview);
   });
   ['search', 'fromDate', 'toDate'].forEach(id => $(id).addEventListener('input', renderRegister));
 
@@ -1402,9 +1677,9 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   $('btnCsv').addEventListener('click', () => {
     const cols = ['billNo','billDate','party','address','startMeter','closeMeter','running','total','rate','amount','advance','balance','operator'];
     const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
-    const csv = [cols.concat(['rating', 'review']).join(',')].concat(filtered().map(b => {
+    const csv = [cols.concat(['rating', 'review', 'party signed']).join(',')].concat(filtered().map(b => {
       const r = reviews.find(x => x.billId === b.id);
-      return cols.map(c => q(b[c])).concat([q(r ? r.rating : ''), q(r ? r.comment : '')]).join(',');
+      return cols.map(c => q(b[c])).concat([q(r ? r.rating : ''), q(r ? r.comment : ''), q(b.sigParty ? 'yes' : 'no')]).join(',');
     })).join('\n');
     downloadText('bills-' + today() + '.csv', '﻿' + csv, 'text/csv');
   });
@@ -1427,11 +1702,12 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   // ---------- Settings view ----------
   function loadSettingsForm() {
     $('setNextNo').value = settings.nextNo; $('setCurrency').value = settings.currency; $('setOperator').value = settings.operator;
+    $('setAutoSign').checked = !!settings.autoSign; renderSavedSig();
   }
   $('btnSaveSettings').addEventListener('click', () => {
     const n = parseInt($('setNextNo').value, 10);
     if (!isNaN(n)) settings.nextNo = n;
-    settings.currency = $('setCurrency').value; settings.operator = $('setOperator').value;
+    settings.currency = $('setCurrency').value; settings.operator = $('setOperator').value; settings.autoSign = $('setAutoSign').checked;
     store(SETTINGS_KEY, settings); flash('Settings saved.');
     if (!currentId) newBill();
   });
@@ -1464,7 +1740,10 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   $('btnSave').addEventListener('click', saveBill);
   $('btnPrint').addEventListener('click', () => window.print());
   $('btnDelete').addEventListener('click', () => currentId && deleteBill(currentId));
-  document.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); saveBill(); } });
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); saveBill(); }
+    if (e.key === 'Escape') { if (!$('signModal').classList.contains('hidden')) closeSign(); else if (!$('previewModal').classList.contains('hidden')) closePreview(); }
+  });
 
   newBill();
 })();

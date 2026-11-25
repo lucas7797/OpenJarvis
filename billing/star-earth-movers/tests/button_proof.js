@@ -173,7 +173,145 @@ const tab = (v) => page.click(`.tab[data-view="${v}"]`);
     expect(await page.isVisible('#btnDelete'), 'Delete button not shown');
     return 'Bill No. 50 stored';
   });
-  await shot('Bill entry screen after saving', page.locator('#slip'));
+  // ---------- Signatures ----------
+  async function scribble(seed) {
+    const bx = await page.locator('#sigPad').boundingBox();
+    await page.mouse.move(bx.x + 50, bx.y + 140); await page.mouse.down();
+    for (let i = 0; i < 45; i++) await page.mouse.move(bx.x + 50 + i * 8, bx.y + 115 + Math.sin(i / seed) * 45 + (i % 7) * 2);
+    await page.mouse.up();
+  }
+  const sigSrc = (who) => page.getAttribute(`#slip .sig[data-who="${who}"] .sig-img`, 'src');
+  await check('Signature', '"✍ Sign" (operator) opens the signature pad', async () => {
+    await page.click('.sig-btn[data-sign="operator"]');
+    expect(await page.isVisible('#signModal'), 'pad not shown');
+    expect(await page.isVisible('#sigSaveDefault'), '"Save as my signature" missing');
+    return 'pad opens with Clear / Upload photo / Save as my signature / Done';
+  });
+  await check('Signature', 'Pen colour buttons', async () => {
+    for (const c of ['Black', 'Red', 'Blue']) {
+      await page.click(`.pen:text-is("${c}")`);
+      expect(await page.locator(`.pen:text-is("${c}")`).evaluate((b) => b.classList.contains('active')), c + ' not selected');
+    }
+    return 'Blue, Black and Red each select';
+  });
+  await check('Signature', 'Drawing + "Clear" button', async () => {
+    await scribble(3);
+    const inked = await page.evaluate(() => { const c = document.getElementById('sigPad'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i]) n++; return n; });
+    expect(inked > 200, 'nothing drawn');
+    await page.click('#sigClear');
+    const after = await page.evaluate(() => { const c = document.getElementById('sigPad'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; for (let i = 3; i < d.length; i += 4) if (d[i]) return 1; return 0; });
+    expect(after === 0, 'not cleared');
+    return 'drawing leaves ink; Clear wipes the pad';
+  });
+  await shot('Signature pad (party signing on a phone or with a mouse)', page.locator('#signModal .modal-box'));
+  await check('Signature', '"Save as my signature" button', async () => {
+    await scribble(3);
+    await page.click('#sigSaveDefault');
+    const s = await ls('sem_settings_v1');
+    expect(s.defaultSig && s.defaultSig.startsWith('data:image/png'), 'not saved');
+    return 'stored as the operator\'s saved signature (' + Math.round(s.defaultSig.length / 1024) + ' KB)';
+  });
+  await check('Signature', '"Done" puts the operator signature on the bill', async () => {
+    await page.click('#sigDone');
+    expect(!(await page.isVisible('#signModal')), 'pad still open');
+    expect((await sigSrc('operator') || '').startsWith('data:image/png'), 'no image on bill');
+    const b = (await ls('sem_bills_v1'))[0];
+    expect(b.sigOperator === '@default', 'bill not updated: ' + String(b.sigOperator).slice(0, 20));
+    return 'signature shown above "Operator Signature" and bill auto-saved';
+  });
+  await check('Signature', 'Party signs', async () => {
+    await page.click('.sig-btn[data-sign="party"]');
+    expect(!(await page.isVisible('#sigSaveDefault')), 'party should not get "Save as my signature"');
+    await page.click('.pen:text-is("Black")');
+    await scribble(5);
+    await page.click('#sigDone');
+    const b = (await ls('sem_bills_v1'))[0];
+    expect(b.sigParty && b.sigParty.startsWith('data:image/png') && b.sigPartyAt, 'party signature not stored');
+    return 'party signature shown and saved with the time signed';
+  });
+  await check('Signature', '"Upload photo" of a signature', async () => {
+    const file = path.join(outDir, 'signature-photo.png');
+    const b64 = await page.evaluate(() => {
+      const c = document.createElement('canvas'); c.width = 400; c.height = 150;
+      const x = c.getContext('2d'); x.fillStyle = '#f4f1e8'; x.fillRect(0, 0, 400, 150);
+      x.strokeStyle = '#1a1a5a'; x.lineWidth = 5; x.beginPath(); x.moveTo(30, 100);
+      x.bezierCurveTo(90, 10, 150, 140, 210, 60); x.bezierCurveTo(260, 0, 320, 130, 370, 50); x.stroke();
+      return c.toDataURL('image/png').split(',')[1];
+    });
+    fs.writeFileSync(file, Buffer.from(b64, 'base64'));
+    await page.click('.sig-btn[data-sign="party"]');
+    await page.setInputFiles('#sigUpload', file);
+    await page.waitForTimeout(400);
+    const corner = await page.evaluate(() => document.getElementById('sigPad').getContext('2d').getImageData(4, 4, 1, 1).data[3]);
+    expect(corner === 0, 'paper background not removed');
+    await page.click('#sigDone');
+    return 'photo loaded, paper background removed, signature applied';
+  });
+  await check('Signature', '"Use my saved signature" button', async () => {
+    await page.click('.sig-btn[data-sign="operator"]');
+    expect(await page.isVisible('#sigUseSaved'), 'button hidden');
+    await page.click('#sigClear');
+    await page.click('#sigUseSaved');
+    await page.click('#sigDone');
+    expect((await sigSrc('operator') || '').startsWith('data:image/png'), 'not applied');
+    return 'saved signature placed back on the bill';
+  });
+  await check('Signature', 'Close (✕) leaves the signature unchanged', async () => {
+    const before = await sigSrc('party');
+    await page.click('.sig-btn[data-sign="party"]');
+    await page.click('#sigClear');
+    await page.click('#signClose');
+    expect(await sigSrc('party') === before, 'changed');
+    return 'cancelling keeps the existing signature';
+  });
+
+  // ---------- Preview ----------
+  await check('Preview', '"Preview" button', async () => {
+    await page.click('#btnPreview');
+    await page.waitForSelector('#previewImg:not(.hidden)');
+    const w = await page.evaluate(() => document.getElementById('previewImg').naturalWidth);
+    expect(w > 1000, 'image width ' + w);
+    return 'shows the finished bill image (' + w + 'px wide)';
+  });
+  await shot('Preview window (with both signatures)', page.locator('#previewModal .modal-box'));
+  await check('Preview', '"Download PDF" in preview', async () => {
+    const d = await download('#pvPdf');
+    expect(d.buf.slice(0, 4).toString() === '%PDF', 'not a PDF');
+    return d.name;
+  });
+  await check('Preview', '"Download JPEG" in preview', async () => {
+    const d = await download('#pvJpg');
+    expect(d.buf[0] === 0xff && d.buf[1] === 0xd8, 'not a JPEG');
+    return d.name;
+  });
+  await check('Preview', '"Share" in preview', async () => {
+    await page.evaluate(() => { window.__shared = null; });
+    await page.click('#pvShare');
+    await page.waitForFunction(() => window.__shared);
+    return 'passes the bill image to the share sheet (simulated)';
+  });
+  await check('Preview', '"Print" in preview', async () => {
+    const before = await page.evaluate(() => window.__printed);
+    await page.click('#pvPrint');
+    expect(await page.evaluate(() => window.__printed) === before + 1, 'print not opened');
+    const printsPreview = await page.evaluate(() => document.body.classList.contains('preview-open'));
+    expect(printsPreview, 'print would not use the preview');
+    return 'opens print with the preview image (simulated)';
+  });
+  await check('Preview', '"Edit bill" in preview', async () => {
+    await page.click('#pvEdit');
+    expect(!(await page.isVisible('#previewModal')) && await page.isVisible('#billView'), 'not back to editing');
+    return 'closes preview, back to the bill';
+  });
+  await check('Preview', 'Close with ✕ and with Esc key', async () => {
+    await page.click('#btnPreview'); await page.click('#previewClose');
+    expect(!(await page.isVisible('#previewModal')), '✕ did not close');
+    await page.click('#btnPreview'); await page.keyboard.press('Escape');
+    expect(!(await page.isVisible('#previewModal')), 'Esc did not close');
+    return 'both close the window';
+  });
+
+  await shot('Bill entry screen after saving (with signatures)', page.locator('#slip'));
 
   // ---------- Bill review ----------
   await check('Bill review', 'Stars + "Save Review"', async () => {
@@ -213,8 +351,9 @@ const tab = (v) => page.click(`.tab[data-view="${v}"]`);
     return 'passes ' + s.name + ' to the phone share sheet (simulated)';
   });
   await check('Bill', '"Print" button', async () => {
+    const before = await page.evaluate(() => window.__printed);
     await page.click('#btnPrint');
-    expect(await page.evaluate(() => window.__printed) === 1, 'print not opened');
+    expect(await page.evaluate(() => window.__printed) === before + 1, 'print not opened');
     return 'opens the print dialog (simulated)';
   });
 
@@ -295,6 +434,22 @@ const tab = (v) => page.click(`.tab[data-view="${v}"]`);
     expect(await val('total') === '8', 'typed-over total lost');
     return 'Bill No. 50 opened for editing, typed-over Total kept';
   });
+  await check('All Bills', '"Preview" button in list', async () => {
+    await tab('registerView');
+    await page.locator('#billRows tr', { hasText: 'Kumar' }).locator('button[data-preview]').click();
+    await page.waitForSelector('#previewImg:not(.hidden)');
+    const title = await page.textContent('#previewTitle');
+    expect(title.includes('Kumar Builders'), title);
+    await page.click('#previewClose');
+    return 'opens the preview window for Kumar Builders';
+  });
+  await check('All Bills', '"✍ Signed" label for signed bills', async () => {
+    await tab('registerView');
+    const row = await page.locator('#billRows tr', { hasText: 'Ravi' }).textContent();
+    expect(row.includes('Signed'), row);
+    return 'Ravi Constructions shows ✍ Signed';
+  });
+  await page.locator('#billRows tr', { hasText: 'Ravi' }).locator('button[data-open]').click();
 
   // ---------- Templates ----------
   await tab('templatesView');
@@ -369,7 +524,33 @@ const tab = (v) => page.click(`.tab[data-view="${v}"]`);
     expect(await val('billNo') === '200' && await val('operator') === 'Murugan', 'not used on new bill');
     return 'new bill uses No. 200 and operator Murugan';
   });
+  await check('Settings', 'Saved signature shown + auto-sign on new bills', async () => {
+    await tab('settingsView');
+    expect(await page.isVisible('#savedSigImg'), 'saved signature not shown');
+    expect(await page.isChecked('#setAutoSign'), 'auto-sign not on');
+    await tab('billView'); await page.click('#btnNew');
+    expect((await sigSrc('operator') || '').startsWith('data:image/png'), 'new bill not auto-signed');
+    expect(!(await sigSrc('party')), 'party signature should be blank');
+    return 'new bill already has the operator signature, party blank';
+  });
+  await check('Settings', 'Auto-sign checkbox off', async () => {
+    await tab('settingsView'); await page.uncheck('#setAutoSign'); await page.click('#btnSaveSettings');
+    await tab('billView'); await page.click('#btnNew');
+    const src = await sigSrc('operator');
+    await tab('settingsView'); await page.check('#setAutoSign'); await page.click('#btnSaveSettings');
+    expect(!src, 'still signed');
+    return 'new bills stay unsigned when switched off';
+  });
+  await check('Settings', '"Remove saved signature" button', async () => {
+    await tab('settingsView'); await page.click('#btnRemoveSavedSig');
+    const s = await ls('sem_settings_v1');
+    const ravi = (await ls('sem_bills_v1')).find((b) => b.party === 'Ravi Constructions');
+    expect(!s.defaultSig, 'still saved');
+    expect(ravi.sigOperator && ravi.sigOperator.startsWith('data:image/png'), 'old bill lost its signature');
+    return 'removed; Bill No. 50 keeps its operator signature';
+  });
   await check('Settings', '"Reset heading & labels" button', async () => {
+    await tab('billView');
     await page.click('#slip .t1'); await page.keyboard.type('X');
     await tab('settingsView'); await page.click('#btnResetHeader');
     const t = await page.textContent('#slip .t1');
