@@ -37,7 +37,17 @@
   button.ghost { background: transparent; color: #fff; border-color: #ffffff55; }
   button.tab.active { background: #7b5cff; color: #fff; }
   .wrap { max-width: 780px; margin: 0 auto; padding: 20px 16px 60px; }
-  .status { min-height: 20px; font-size: 13px; margin-bottom: 8px; }
+  /* status messages: a toast pinned to the bottom so it is always visible */
+  .status {
+    position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 80;
+    max-width: calc(100% - 32px); padding: 10px 16px; border-radius: 8px;
+    background: #1d1a24; color: #b8f5c8; font-size: 14px; box-shadow: 0 4px 16px #0006;
+    opacity: 0; pointer-events: none; transition: opacity .2s;
+  }
+  .status.show { opacity: 1; }
+  .status.bad { color: #ffb4b4; }
+  .env-banner { background: #fff3c4; color: #5a4300; border-radius: 8px; padding: 10px 14px; font-size: 13px; line-height: 1.5; margin-bottom: 12px; }
+  .env-banner b { color: #3d2e00; }
 
   /* ---------- Bill slip (template driven) ---------- */
   .slip {
@@ -172,6 +182,8 @@
   .slip.layout-receipt .field label, .slip.layout-receipt .row label { font-size: 15px; }
   .slip.layout-receipt .sign { padding: 30px 12px 12px; font-size: 14px; }
   .slip.layout-receipt .sign .line { width: 140px; }
+  .slip.layout-receipt .sig-area { width: 150px; height: 60px; }
+  .slip.layout-receipt .sig-img { max-width: 150px; max-height: 60px; }
 
   .hint { color: #ddd; font-size: 12px; margin-top: 10px; line-height: 1.5; }
 
@@ -267,7 +279,7 @@
   @media print {
     @page { size: A5 portrait; margin: 8mm; }
     body { background: #fff; }
-    .toolbar, .status, .hint, .no-print, .auto, .sig-btn, .modal { display: none !important; }
+    .toolbar, .status, .hint, .no-print, .auto, .sig-btn, .modal, .env-banner { display: none !important; }
     /* printing from the preview window prints the preview image */
     body.preview-open .wrap { display: none !important; }
     body.preview-open #previewModal { display: block !important; position: static; background: none; padding: 0; }
@@ -304,7 +316,8 @@
 </div>
 
 <div class="wrap">
-  <div class="status" id="status"></div>
+  <div class="status" id="status" role="status" aria-live="polite"></div>
+  <div class="env-banner hidden" id="envBanner"></div>
 
   <!-- ================= BILL ENTRY ================= -->
   <section id="billView">
@@ -524,10 +537,20 @@
   </div>
 </div>
 
+<!-- ================= CONFIRM DIALOG (works even where pop-ups are blocked) ================= -->
+<div class="modal hidden" id="askModal" role="alertdialog" aria-modal="true" aria-labelledby="askText">
+  <div class="modal-box" style="max-width:420px">
+    <div class="modal-body" style="background:#fff;text-align:left;font-size:16px;padding:20px" id="askText"></div>
+    <div class="modal-foot" style="justify-content:flex-end">
+      <button id="askNo">Cancel</button>
+      <button class="primary" id="askYes">OK</button>
+    </div>
+  </div>
+</div>
+
 <div id="exportStage" aria-hidden="true"></div>
 
-<!-- PDF / JPEG export libraries (bundled locally so it works offline) -->
-<script src="vendor/html2canvas-1.4.1.min.js"></script>
+<!-- PDF library (bundled locally so it works offline) -->
 <script src="vendor/jspdf-2.5.1.umd.min.js"></script>
 
 <script>
@@ -537,11 +560,24 @@
   const REVIEWS_KEY = 'sem_reviews_v1';
   const $ = (id) => document.getElementById(id);
 
+  // Some viewer apps (file previews, chat apps) block browser storage. Then the app keeps
+  // working from memory and warns that bills will not be kept after closing.
+  const memory = {};
+  let storageOk = true;
+  try { localStorage.setItem('__sem_test', '1'); localStorage.removeItem('__sem_test'); }
+  catch (e) { storageOk = !!(e && e.name === 'QuotaExceededError'); }
+  // read-only access for backups/tests: window.semStorage.get('sem_bills_v1')
+  window.semStorage = { get: (k) => load(k, null) };
+  const inFrame = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
+
   function load(key, fallback) {
-    try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
-    catch (e) { return fallback; }
+    try {
+      const v = storageOk ? localStorage.getItem(key) : memory[key];
+      return v ? JSON.parse(v) : fallback;
+    } catch (e) { return fallback; }
   }
   function store(key, value) {
+    if (!storageOk) { memory[key] = JSON.stringify(value); return true; }
     try { localStorage.setItem(key, JSON.stringify(value)); return true; }
     catch (e) {
       flash(e && e.name === 'QuotaExceededError' ? 'Storage is full — download a backup, then delete old bills.' : 'Could not save — browser storage is blocked.', true);
@@ -780,12 +816,12 @@
     updateParties();
   }
 
-  function saveBill() {
+  async function saveBill() {
     const data = readForm();
     if (!data.billNo) { flash('Enter a bill number.', true); return false; }
     if (!data.party) { flash('Enter the party name (M/s.).', true); $('party').focus(); return false; }
     const dup = bills.find(b => b.billNo === data.billNo && b.id !== currentId);
-    if (dup && !confirm('Bill No. ' + data.billNo + ' already exists. Save anyway?')) return false;
+    if (dup && !(await ask('Bill No. ' + data.billNo + ' already exists. Save anyway?', 'Save anyway'))) return false;
     if (currentId) {
       const i = bills.findIndex(b => b.id === currentId);
       bills[i] = Object.assign(bills[i], data, { updated: Date.now() });
@@ -806,9 +842,9 @@
     return false;
   }
 
-  function deleteBill(id) {
+  async function deleteBill(id) {
     const b = bills.find(x => x.id === id); if (!b) return;
-    if (!confirm('Delete Bill No. ' + b.billNo + ' (' + b.party + ')?')) return;
+    if (!(await ask('Delete Bill No. ' + b.billNo + ' (' + b.party + ')?', 'Delete', true))) return;
     bills = bills.filter(x => x.id !== id); store(BILLS_KEY, bills);
     reviews.forEach(r => { if (r.billId === id) r.billId = null; }); store(REVIEWS_KEY, reviews);
     flash('Bill deleted.');
@@ -855,14 +891,89 @@
     return clone;
   }
 
+  // Draws the bill onto a canvas ourselves (backgrounds, borders, text, logo, signatures).
+  // No third-party renderer, so it also works inside viewer apps that sandbox the page.
+  const loadImg = (src) => new Promise((res, rej) => {
+    const im = new Image(); im.onload = () => res(im); im.onerror = () => rej(new Error('image failed to load')); im.src = src;
+  });
+  const visibleColor = (c) => c && c !== 'transparent' && !/rgba\([^)]*,\s*0\)$/.test(c);
+  const graphemes = (t) => (window.Intl && Intl.Segmenter)
+    ? Array.from(new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(t), x => ({ s: x.segment, i: x.index }))
+    : Array.from(t).reduce((a, ch) => { a.push({ s: ch, i: a.length ? a[a.length - 1].i + a[a.length - 1].s.length : 0 }); return a; }, []);
+
+  function drawBorders(ctx, r, cs) {
+    [['Top', r.left, r.top, r.right, r.top, 0, 1], ['Bottom', r.left, r.bottom, r.right, r.bottom, 0, -1],
+     ['Left', r.left, r.top, r.left, r.bottom, 1, 0], ['Right', r.right, r.top, r.right, r.bottom, -1, 0]].forEach(([side, x1, y1, x2, y2, dx, dy]) => {
+      const w = parseFloat(cs['border' + side + 'Width']) || 0, style = cs['border' + side + 'Style'];
+      if (!w || style === 'none' || style === 'hidden') return;
+      const o = w / 2;
+      ctx.save();
+      ctx.strokeStyle = cs['border' + side + 'Color']; ctx.lineWidth = w;
+      if (style === 'dotted') { ctx.lineCap = 'round'; ctx.setLineDash([0.01, w * 2]); }
+      else if (style === 'dashed') { ctx.lineCap = 'butt'; ctx.setLineDash([w * 3, w * 2]); }
+      ctx.beginPath(); ctx.moveTo(x1 + dx * o, y1 + dy * o); ctx.lineTo(x2 + dx * o, y2 + dy * o); ctx.stroke();
+      ctx.restore();
+    });
+  }
+  function drawText(ctx, node, cs) {
+    const text = node.textContent;
+    if (!text.trim()) return;
+    ctx.font = [cs.fontStyle, cs.fontWeight, cs.fontSize, cs.fontFamily].join(' ');
+    ctx.fillStyle = cs.color; ctx.textBaseline = 'alphabetic';
+    const m = ctx.measureText('Mg');
+    const asc = m.fontBoundingBoxAscent || m.actualBoundingBoxAscent || parseFloat(cs.fontSize) * 0.8;
+    const desc = m.fontBoundingBoxDescent || m.actualBoundingBoxDescent || parseFloat(cs.fontSize) * 0.2;
+    const range = document.createRange();
+    graphemes(text).forEach(g => {
+      if (!g.s.trim() || g.s === '​') return;
+      range.setStart(node, g.i); range.setEnd(node, g.i + g.s.length);
+      const rr = range.getClientRects()[0];
+      if (!rr || !rr.width) return;
+      ctx.fillText(g.s, rr.left, rr.top + (rr.height - (asc + desc)) / 2 + asc);
+    });
+  }
+  async function drawSvg(ctx, el, cs, r, paper, ink) {
+    const c = el.cloneNode(true);
+    c.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    c.setAttribute('width', r.width); c.setAttribute('height', r.height);
+    c.setAttribute('style', 'color:' + cs.color);
+    const src = new XMLSerializer().serializeToString(c).split('var(--paper)').join(paper).split('var(--ink)').join(ink);
+    const im = await loadImg('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(src));
+    ctx.drawImage(im, r.left, r.top, r.width, r.height);
+  }
+  async function paint(ctx, el, paper, ink) {
+    const cs = getComputedStyle(el);
+    if (cs.display === 'none' || cs.visibility === 'hidden') return;
+    const r = el.getBoundingClientRect();
+    if (visibleColor(cs.backgroundColor)) { ctx.fillStyle = cs.backgroundColor; ctx.fillRect(r.left, r.top, r.width, r.height); }
+    drawBorders(ctx, r, cs);
+    const tag = el.tagName.toLowerCase();
+    if (tag === 'svg') { await drawSvg(ctx, el, cs, r, paper, ink); return; }
+    if (tag === 'img') {
+      if (el.getAttribute('src') && r.width) { const im = await loadImg(el.src); ctx.drawImage(im, r.left, r.top, r.width, r.height); }
+      return;
+    }
+    for (const n of el.childNodes) {
+      if (n.nodeType === 3) drawText(ctx, n, cs);
+      else if (n.nodeType === 1) await paint(ctx, n, paper, ink);
+    }
+  }
   async function renderCanvas() {
-    if (typeof html2canvas !== 'function') throw new Error('Export library not loaded');
     const stage = $('exportStage');
     stage.innerHTML = '';
     const clone = staticSlip();
     stage.appendChild(clone);
     try {
-      return await html2canvas(clone, { scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false });
+      if (document.fonts && document.fonts.ready) await document.fonts.ready;
+      const root = clone.getBoundingClientRect(), scale = 2;
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.ceil(root.width * scale); canvas.height = Math.ceil(root.height * scale);
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.setTransform(scale, 0, 0, scale, -root.left * scale, -root.top * scale);
+      const cs = getComputedStyle(clone);
+      await paint(ctx, clone, cs.getPropertyValue('--paper').trim(), cs.getPropertyValue('--ink').trim());
+      return canvas;
     } finally { stage.innerHTML = ''; }
   }
 
@@ -877,7 +988,12 @@
 
   async function withBusy(btn, fn) {
     btn.disabled = true; const t = btn.textContent; btn.textContent = '…';
-    try { await fn(); } catch (e) { console.error(e); flash('Could not create the file: ' + e.message, true); }
+    try { await fn(); }
+    catch (e) {
+      if (e && e.name === 'AbortError') return;            // user closed the share sheet
+      console.error(e);
+      flash(e && e.name === 'NotAllowedError' ? 'Sharing is blocked here — use PDF or JPEG instead.' : 'Could not create the file: ' + (e && e.message), true);
+    }
     finally { btn.disabled = false; btn.textContent = t; }
   }
 
@@ -896,16 +1012,19 @@
     const canvas = await renderCanvas();
     return new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.95));
   }
+  const downloadedMsg = (kind) => inFrame
+    ? kind + ' ready. If nothing downloaded, this viewer blocks downloads — tap Preview and long-press the picture to save it.'
+    : kind + ' downloaded.';
   function saveBlob(blob, name) {
     const url = URL.createObjectURL(blob); downloadUrl(name, url);
     setTimeout(() => URL.revokeObjectURL(url), 2000);
   }
 
   $('btnPdf').addEventListener('click', e => withBusy(e.currentTarget, async () => {
-    saveBlob(await makePdfBlob(), fileBase() + '.pdf'); flash('PDF downloaded.');
+    saveBlob(await makePdfBlob(), fileBase() + '.pdf'); flash(downloadedMsg('PDF'));
   }));
   $('btnJpg').addEventListener('click', e => withBusy(e.currentTarget, async () => {
-    saveBlob(await makeJpgBlob(), fileBase() + '.jpg'); flash('JPEG downloaded.');
+    saveBlob(await makeJpgBlob(), fileBase() + '.jpg'); flash(downloadedMsg('JPEG'));
   }));
   // Share (WhatsApp etc.) where the phone supports sharing files
   try {
@@ -949,7 +1068,7 @@
   $('previewClose').addEventListener('click', closePreview);
   $('previewModal').addEventListener('click', e => { if (e.target === $('previewModal')) closePreview(); });
   $('pvEdit').addEventListener('click', () => { closePreview(); showView('billView'); });
-  $('pvPrint').addEventListener('click', () => window.print());
+  $('pvPrint').addEventListener('click', printNow);
   $('pvPdf').addEventListener('click', e => $('btnPdf').click());
   $('pvJpg').addEventListener('click', e => $('btnJpg').click());
   $('pvShare').addEventListener('click', e => $('btnShare').click());
@@ -966,7 +1085,7 @@
   }
 
   const pad = $('sigPad');
-  const pctx = pad.getContext('2d');
+  const pctx = pad.getContext('2d', { willReadFrequently: true });
   let signingFor = null, drawing = false, hasInk = false, penColor = '#1f2a55', last = null;
 
   function sizePad() {
@@ -1076,7 +1195,7 @@
     const url = hasInk ? padToDataUrl() : '';
     setSig(who, url, url ? Date.now() : null);
     closeSign();
-    if (currentId) { if (saveBill()) flash(url ? 'Signature added and bill saved.' : 'Signature removed and bill saved.'); }
+    if (currentId) { saveBill().then(ok => ok && flash(url ? 'Signature added and bill saved.' : 'Signature removed and bill saved.')); }
     else flash(url ? 'Signature added — press Save to keep the bill.' : 'Signature removed.');
   });
 
@@ -1086,9 +1205,9 @@
     if (has) $('savedSigImg').src = settings.defaultSig; else $('savedSigImg').removeAttribute('src');
     $('noSavedSig').classList.toggle('hidden', has);
   }
-  $('btnRemoveSavedSig').addEventListener('click', () => {
+  $('btnRemoveSavedSig').addEventListener('click', async () => {
     if (!settings.defaultSig) { flash('No saved signature.'); return; }
-    if (!confirm('Remove your saved signature? Bills already saved keep their signature.')) return;
+    if (!(await ask('Remove your saved signature? Bills already saved keep their signature.', 'Remove', true))) return;
     bills.forEach(b => { if (b.sigOperator === '@default') b.sigOperator = settings.defaultSig; });
     store(BILLS_KEY, bills);
     if (sigs.operator === settings.defaultSig && !currentId) setSig('operator', '');
@@ -1189,22 +1308,23 @@
       [...bills].sort((a, b) => (parseInt(b.billNo) || 0) - (parseInt(a.billNo) || 0))
         .map(b => '<option value="' + b.id + '">No. ' + esc(b.billNo) + ' — ' + esc(b.party) + ' (' + fmtDate(b.billDate) + ')</option>').join('');
   }
-  $('reviewList').addEventListener('click', e => {
+  $('reviewList').addEventListener('click', async e => {
+    const id = e.target.dataset.delrev;
     if (e.target.dataset.openbill) openBill(e.target.dataset.openbill);
-    if (e.target.dataset.delrev && confirm('Delete this review?')) {
-      reviews = reviews.filter(r => r.id !== e.target.dataset.delrev); store(REVIEWS_KEY, reviews); renderReviews();
+    if (id && await ask('Delete this review?', 'Delete', true)) {
+      reviews = reviews.filter(r => r.id !== id); store(REVIEWS_KEY, reviews); renderReviews(); flash('Review deleted.');
     }
   });
   ['reviewSearch', 'reviewFilter'].forEach(id => $(id).addEventListener('input', renderReviews));
   $('rvBill').addEventListener('change', () => {
     const b = bills.find(x => x.id === $('rvBill').value); if (b) $('rvParty').value = b.party;
   });
-  $('btnAddReview').addEventListener('click', () => {
+  $('btnAddReview').addEventListener('click', async () => {
     const party = $('rvParty').value.trim(), rating = rvStars.get();
     if (!party) { flash('Enter the party name.', true); return; }
     if (!rating) { flash('Tap the stars to give a rating.', true); return; }
     const b = bills.find(x => x.id === $('rvBill').value);
-    if (b && reviews.some(r => r.billId === b.id) && !confirm('This bill already has a review. Add another?')) return;
+    if (b && reviews.some(r => r.billId === b.id) && !(await ask('This bill already has a review. Add another?', 'Add another'))) return;
     reviews.push({ id: 'r' + Date.now(), billId: b ? b.id : null, billNo: b ? b.billNo : '', party, rating,
       comment: $('rvText').value.trim(), date: today(), created: Date.now() });
     store(REVIEWS_KEY, reviews);
@@ -1260,16 +1380,18 @@
       const r = reviews.find(x => x.billId === b.id);
       return cols.map(c => q(b[c])).concat([q(r ? r.rating : ''), q(r ? r.comment : ''), q(b.sigParty ? 'yes' : 'no')]).join(',');
     })).join('\n');
-    downloadText('bills-' + today() + '.csv', '﻿' + csv, 'text/csv');
+    downloadText('bills-' + today() + '.csv', '\ufeff' + csv, 'text/csv'); flash(downloadedMsg('CSV'));
   });
-  $('btnBackup').addEventListener('click', () =>
-    downloadText('bills-backup-' + today() + '.json', JSON.stringify({ bills, reviews, settings }, null, 2), 'application/json'));
+  $('btnBackup').addEventListener('click', () => {
+    downloadText('bills-backup-' + today() + '.json', JSON.stringify({ bills, reviews, settings }, null, 2), 'application/json');
+    flash(downloadedMsg('Backup'));
+  });
   $('restoreFile').addEventListener('change', e => {
     const f = e.target.files[0]; if (!f) return;
-    f.text().then(t => {
+    f.text().then(async t => {
       const d = JSON.parse(t);
       if (!Array.isArray(d.bills)) throw new Error('bad file');
-      if (!confirm('Replace current ' + bills.length + ' bill(s) with ' + d.bills.length + ' from backup?')) return;
+      if (!(await ask('Replace the current ' + bills.length + ' bill(s) with the ' + d.bills.length + ' bill(s) in this backup?', 'Restore', true))) return;
       bills = d.bills; reviews = Array.isArray(d.reviews) ? d.reviews : [];
       if (d.settings) settings = Object.assign(settings, d.settings);
       store(BILLS_KEY, bills); store(REVIEWS_KEY, reviews); store(SETTINGS_KEY, settings);
@@ -1290,8 +1412,8 @@
     store(SETTINGS_KEY, settings); flash('Settings saved.');
     if (!currentId) newBill();
   });
-  $('btnResetHeader').addEventListener('click', () => {
-    if (!confirm('Reset the heading, phone numbers and labels to the original text?')) return;
+  $('btnResetHeader').addEventListener('click', async () => {
+    if (!(await ask('Reset the heading, phone numbers and labels to the original text?', 'Reset', true))) return;
     settings.text = {}; store(SETTINGS_KEY, settings); applyText(); flash('Heading reset.');
   });
 
@@ -1311,17 +1433,52 @@
 
   let flashTimer;
   function flash(msg, bad) {
-    const s = $('status'); s.textContent = msg; s.style.color = bad ? '#ffb4b4' : '#b8f5c8';
-    clearTimeout(flashTimer); flashTimer = setTimeout(() => s.textContent = '', 3500);
+    const s = $('status');
+    s.textContent = msg; s.classList.toggle('bad', !!bad); s.classList.add('show');
+    clearTimeout(flashTimer); flashTimer = setTimeout(() => s.classList.remove('show'), bad ? 6000 : 3500);
+  }
+
+  // In-page confirm (browser confirm() is silently blocked inside many viewer apps)
+  let askResolve = null;
+  function ask(message, okLabel, danger) {
+    if (askResolve) askResolve(false);
+    $('askText').textContent = message;
+    $('askYes').textContent = okLabel || 'OK';
+    $('askYes').className = danger ? 'danger' : 'primary';
+    $('askModal').classList.remove('hidden');
+    $('askYes').focus();
+    return new Promise(res => { askResolve = res; });
+  }
+  function answer(v) {
+    $('askModal').classList.add('hidden');
+    const r = askResolve; askResolve = null; if (r) r(v);
+  }
+  $('askYes').addEventListener('click', () => answer(true));
+  $('askNo').addEventListener('click', () => answer(false));
+  $('askModal').addEventListener('click', e => { if (e.target === $('askModal')) answer(false); });
+
+  function printNow() {
+    if (inFrame) flash('If the print window does not open, this viewer blocks printing — open the file in Chrome or Safari.', true);
+    try { window.print(); } catch (e) { flash('Printing is blocked here — open the file in Chrome or Safari.', true); }
+  }
+
+  if (!storageOk || inFrame) {
+    const b = $('envBanner');
+    b.innerHTML = '<b>You are viewing this inside another app.</b> ' +
+      (!storageOk ? 'Saving is blocked here, so bills will be <b>lost when you close it</b>. ' : '') +
+      'Downloads and printing may also be blocked. For everything to work, open the file in <b>Chrome</b> or <b>Safari</b> ' +
+      '(save the file to your phone, then open it with the browser).';
+    b.classList.remove('hidden');
   }
 
   $('btnNew').addEventListener('click', newBill);
-  $('btnSave').addEventListener('click', saveBill);
-  $('btnPrint').addEventListener('click', () => window.print());
+  $('btnSave').addEventListener('click', () => saveBill());
+  $('btnPrint').addEventListener('click', printNow);
   $('btnDelete').addEventListener('click', () => currentId && deleteBill(currentId));
   document.addEventListener('keydown', e => {
     if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); saveBill(); }
-    if (e.key === 'Escape') { if (!$('signModal').classList.contains('hidden')) closeSign(); else if (!$('previewModal').classList.contains('hidden')) closePreview(); }
+    if (e.key === 'Enter' && !$('askModal').classList.contains('hidden')) { e.preventDefault(); answer(true); }
+    if (e.key === 'Escape') { if (!$('askModal').classList.contains('hidden')) answer(false); else if (!$('signModal').classList.contains('hidden')) closeSign(); else if (!$('previewModal').classList.contains('hidden')) closePreview(); }
   });
 
   newBill();
