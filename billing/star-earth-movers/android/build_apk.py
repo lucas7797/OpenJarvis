@@ -31,8 +31,8 @@ import zlib
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PACKAGE = 'com.starearthmovers.billing'
-VERSION_CODE = 2
-VERSION_NAME = '1.1'
+VERSION_CODE = 3
+VERSION_NAME = '1.2'
 APP_LABEL = 'Star Billing'
 MIN_SDK, TARGET_SDK = 24, 34
 ICON_RES_ID = 0x7f010000  # @mipmap/ic_launcher (package 0x7f, type 1, entry 0)

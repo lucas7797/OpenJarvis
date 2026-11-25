@@ -226,6 +226,64 @@ const tab = (v) => P.click(`.tab[data-view="${v}"]`);
     expect(v.join() === '7.5,7.5,9000,7000', v.join());
     return 'Running 7.5, Total 7.5, Amount 9000, Balance 7000';
   });
+  // ---------- Natural handwriting ----------
+  const hwLines = () => P.locator('#slip .hw-layer .hw-line').count();
+  const hwStyle = () => P.evaluate(() => [...document.querySelectorAll('#slip .hw-layer .hw-line')].map((d) => d.style.transform + d.innerHTML).join('#'));
+  await check('Natural handwriting', 'On by default (Medium): every filled field is hand-written', async () => {
+    await P.evaluate(() => document.activeElement && document.activeElement.blur());
+    await P.waitForTimeout(100);
+    const n = await hwLines();
+    const filled = await P.evaluate(() => [...document.querySelectorAll('#slip input.line')].filter((i) => i.value).length);
+    const hidden = await P.evaluate(() => getComputedStyle(document.getElementById('party')).color);
+    expect(n === filled && n > 5, n + ' written lines for ' + filled + ' filled fields');
+    expect(/rgba\(0, 0, 0, 0\)|transparent/.test(hidden), 'typed text still visible: ' + hidden);
+    return n + ' lines, each with its own start, height and tilt';
+  });
+  await check('Natural handwriting', 'Letters vary in position, angle and size', async () => {
+    const t = await P.evaluate(() => [...document.querySelectorAll('#slip .hw-line')].find((d) => d.textContent.includes('Ravi'))
+      .querySelectorAll('span'));
+    const list = await P.evaluate(() => [...[...document.querySelectorAll('#slip .hw-line')].find((d) => d.textContent.includes('Ravi')).querySelectorAll('span')].map((x) => x.style.transform));
+    expect(new Set(list).size === list.length && list.length >= 15, 'letters look the same');
+    return list.length + ' letters in "Ravi Constructions", every one slightly different';
+  });
+  await check('Natural handwriting', 'Typing shows normal text in the field being edited', async () => {
+    await P.focus('#party');
+    await P.waitForTimeout(80);
+    const partyLine = await P.evaluate(() => [...document.querySelectorAll('#slip .hw-line')].some((d) => d.textContent.includes('Ravi')));
+    const color = await P.evaluate(() => getComputedStyle(document.getElementById('party')).color);
+    await P.focus('#rate'); await P.evaluate(() => document.activeElement.blur()); await P.waitForTimeout(80);
+    expect(!partyLine && !/rgba\(0, 0, 0, 0\)/.test(color), 'still covered while typing');
+    return 'while typing, the field shows plain text; handwriting returns afterwards';
+  });
+  for (const [v, label] of [['off', 'Off'], ['light', 'Light'], ['strong', 'Strong'], ['medium', 'Medium']]) {
+    await check('Natural handwriting', `Level "${label}"`, async () => {
+      await P.click('#headingPanel summary').catch(() => {});
+      if (!(await P.isVisible('.seg[data-key="humanize"]'))) await P.click('#headingPanel summary');
+      await P.click(`.seg[data-key="humanize"] button[data-v="${v}"]`);
+      await P.waitForTimeout(80);
+      const n = await hwLines();
+      expect((await ls('sem_settings_v1')).humanize === v, 'not saved');
+      expect(v === 'off' ? n === 0 : n > 5, n + ' lines');
+      return v === 'off' ? 'plain typed text' : n + ' hand-written lines';
+    });
+  }
+  await check('Natural handwriting', '"✍ Write again" button', async () => {
+    const before = await hwStyle();
+    await P.click('#btnReroll'); await P.waitForTimeout(80);
+    const after = await hwStyle();
+    expect(before !== after, 'looks the same');
+    return 'same words, written with a slightly different hand';
+  });
+  await check('Natural handwriting', 'Same look in the downloaded picture every time', async () => {
+    const a = await P.evaluate(async () => { document.getElementById('btnPreview').click(); await new Promise((r) => setTimeout(r, 1500)); return document.getElementById('previewImg').src; });
+    await P.click('#previewClose');
+    const b = await P.evaluate(async () => { document.getElementById('btnPreview').click(); await new Promise((r) => setTimeout(r, 1500)); return document.getElementById('previewImg').src; });
+    await P.click('#previewClose');
+    expect(a === b && a.length > 1000, 'pictures differ');
+    return 'two renders of the bill are identical (stable per bill)';
+  });
+  await shot('Natural handwriting on the bill', P.locator('#slip'));
+
   for (const id of ['running', 'total', 'amount', 'balance']) {
     await check('Bill', `↺ button on ${id[0].toUpperCase() + id.slice(1)}`, async () => {
       const before = await val(id);
@@ -248,6 +306,16 @@ const tab = (v) => P.click(`.tab[data-view="${v}"]`);
     expect(bills.length === 1 && bills[0].billNo === '50' && bills[0].amount === '9600', JSON.stringify(bills));
     expect(await P.isVisible('#btnDelete'), 'Delete button not shown');
     return 'Bill No. 50 stored';
+  });
+  await check('Natural handwriting', 'Saved bill keeps its own handwriting', async () => {
+    const b = (await ls('sem_bills_v1'))[0];
+    expect(b.hwSeed, 'no handwriting seed stored');
+    const before = await hwStyle();
+    await P.click('#btnNew'); await P.waitForTimeout(80);
+    await tab('registerView'); await P.locator('#billRows button[data-open]').first().click(); await P.waitForTimeout(120);
+    const after = await hwStyle();
+    expect(before === after, 'handwriting changed after reopening');
+    return 'reopened Bill No. 50 looks exactly as before';
   });
   // ---------- Signatures ----------
   async function scribble(seed) {
@@ -372,7 +440,7 @@ const tab = (v) => P.click(`.tab[data-view="${v}"]`);
   await check('Preview', '"Print" in preview', async () => {
     const before = await P.evaluate(() => window.__printed);
     await P.click('#pvPrint');
-    expect(await P.evaluate(() => window.__printed) === before + 1, 'print not opened');
+    await P.waitForFunction((b) => window.__printed === b + 1, before);
     const printsPreview = await P.evaluate(() => document.body.classList.contains('preview-open'));
     expect(printsPreview, 'print would not use the preview');
     return 'opens print with the preview image (simulated)';
@@ -473,8 +541,11 @@ const tab = (v) => P.click(`.tab[data-view="${v}"]`);
   await check('Bill', '"Print" button', async () => {
     const before = await P.evaluate(() => window.__printed);
     await P.click('#btnPrint');
-    expect(await P.evaluate(() => window.__printed) === before + 1, 'print not opened');
-    return 'opens the print dialog (simulated)';
+    await P.waitForFunction((b) => window.__printed === b + 1, before);
+    const usesPicture = await P.evaluate(() => document.body.classList.contains('preview-open') && !!document.getElementById('previewImg').getAttribute('src'));
+    await P.click('#previewClose');
+    expect(usesPicture, 'did not print the finished bill picture');
+    return 'prints the finished bill picture, same as the PDF (print dialog simulated)';
   });
 
   // ---------- New / second bill / Delete ----------

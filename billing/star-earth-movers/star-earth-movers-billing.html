@@ -72,6 +72,12 @@
     width: 100%;
   }
   .frame { border: 2px solid var(--ink); }
+  /* natural handwriting: drawn over the fields when they are not being edited */
+  #slip { position: relative; }
+  .hw-layer { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+  .hw-line { position: absolute; white-space: pre; overflow: hidden; transform-origin: 0 50%; box-sizing: border-box; color: var(--hand); }
+  .hw-line span { display: inline-block; white-space: pre; transform-origin: 0 70%; }
+  #slip.hw-on input.line:not(:focus) { color: transparent; }
   /* Heading: equal side columns so the title is truly centred on the page */
   .head {
     display: grid; grid-template-columns: 180px minmax(0, 1fr) 180px;
@@ -309,7 +315,8 @@
   @media print {
     @page { size: A5 portrait; margin: 8mm; }
     body { background: #fff; }
-    .toolbar, .status, .hint, .no-print, .auto, .sig-btn, .modal, .env-banner { display: none !important; }
+    .toolbar, .status, .hint, .no-print, .auto, .sig-btn, .modal, .env-banner, .hw-layer { display: none !important; }
+    #slip.hw-on input.line { color: var(--hand) !important; }
     /* printing from the preview window prints the preview image */
     body.preview-open .wrap { display: none !important; }
     body.preview-open #previewModal { display: block !important; position: static; background: none; padding: 0; }
@@ -424,6 +431,9 @@
         <div class="seg" data-key="contactAlign"><button data-v="auto">Auto</button><button data-v="left">Left</button><button data-v="center">Centre</button><button data-v="right">Right</button></div></div>
       <div class="ctl"><span>Title size</span>
         <div class="seg" data-key="titleSize"><button data-v="s">Small</button><button data-v="m">Medium</button><button data-v="l">Large</button></div></div>
+      <div class="ctl"><span>Natural handwriting</span>
+        <div class="seg" data-key="humanize"><button data-v="off">Off</button><button data-v="light">Light</button><button data-v="medium">Medium</button><button data-v="strong">Strong</button></div>
+        <button type="button" id="btnReroll" title="Write this bill again with a different hand">✍ Write again</button></div>
       <div class="ctl"><span>Handwriting style (filled-in values)</span></div>
       <div class="font-grid" id="fontGrid"></div>
       <div class="ctl"><span>Logo (15 designs)</span></div>
@@ -1241,6 +1251,79 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     flash('Handwriting: ' + (f ? f.name : 'template default') + '.');
   });
 
+  // ---------- Natural handwriting ----------
+  // Every bill gets its own seed, so each bill is "written" differently, but a bill always
+  // looks the same on screen, in the preview, PDF, JPEG and print.
+  if (!settings.humanize) settings.humanize = 'medium';
+  let hwSeed = '';
+  const newSeed = () => Math.random().toString(36).slice(2, 10);
+  const HW_LEVEL = { off: 0, light: 0.55, medium: 1, strong: 1.55 };
+  const hwK = () => HW_LEVEL[settings.humanize] || 0;
+  function hashStr(str) {
+    let h = 2166136261;
+    for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return h >>> 0;
+  }
+  function rnd(key) { // deterministic value in [-1, 1]
+    let t = (hashStr(hwSeed + '|' + key) + 0x6D2B79F5) >>> 0;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return (((t ^ (t >>> 14)) >>> 0) / 4294967296) * 2 - 1;
+  }
+  function lineJitter(field) {   // where this line of writing starts, and its tilt
+    const k = hwK();
+    return { dx: (rnd(field + '|ldx') + 1) * 4 * k, dy: rnd(field + '|ldy') * 2.6 * k, rot: rnd(field + '|lrot') * 1.1 * k };
+  }
+  function charJitter(field, n) { // each letter: height, angle, size, spacing
+    const k = hwK(), key = field + '|' + n + '|';
+    return { dx: rnd(key + 'x') * 0.5 * k, dy: rnd(key + 'y') * 1.4 * k, rot: rnd(key + 'r') * 4.5 * k,
+             s: 1 + rnd(key + 's') * 0.06 * k, sp: rnd(key + 'p') * 0.3 * k };
+  }
+
+  let hwQueued = false;
+  function scheduleHW() {
+    if (hwQueued) return; hwQueued = true;
+    requestAnimationFrame(() => { hwQueued = false; layoutHW(); });
+  }
+  function layoutHW() {
+    const slip = $('slip');
+    let layer = slip.querySelector('.hw-layer');
+    if (!layer) { layer = document.createElement('div'); layer.className = 'hw-layer'; layer.setAttribute('aria-hidden', 'true'); slip.appendChild(layer); }
+    const on = hwK() > 0 && !$('billView').classList.contains('hidden');
+    slip.classList.toggle('hw-on', on);
+    if (!on) { layer.innerHTML = ''; return; }
+    const sr = slip.getBoundingClientRect();
+    let html = '';
+    slip.querySelectorAll('input.line').forEach(inp => {
+      if (inp === document.activeElement) return;
+      const v = inp.type === 'date' ? fmtDate(inp.value) : inp.value;
+      if (!v) return;
+      const r = inp.getBoundingClientRect(), cs = getComputedStyle(inp), L = lineJitter(inp.id);
+      let cum = 0;
+      const chars = graphemes(v).map((g, n) => {
+        const c = charJitter(inp.id, n); cum += c.sp;
+        return '<span style="transform:translate(' + (cum + c.dx).toFixed(2) + 'px,' + c.dy.toFixed(2) + 'px) rotate(' + c.rot.toFixed(2) + 'deg) scale(' + c.s.toFixed(3) + ')">' + esc(g.s) + '</span>';
+      }).join('');
+      html += '<div class="hw-line" style="left:' + (r.left - sr.left) + 'px;top:' + (r.top - sr.top) + 'px;width:' + r.width + 'px;height:' + r.height + 'px;' +
+        'font:' + cs.fontStyle + ' ' + cs.fontWeight + ' ' + cs.fontSize + '/' + r.height + 'px ' + cs.fontFamily.replace(/"/g, "'") + ';' +
+        'padding-left:' + cs.paddingLeft + ';padding-right:' + cs.paddingRight + ';text-align:' + cs.textAlign + ';' +
+        'transform:translate(' + L.dx.toFixed(2) + 'px,' + L.dy.toFixed(2) + 'px) rotate(' + L.rot.toFixed(2) + 'deg)">' + chars + '</div>';
+    });
+    layer.innerHTML = html;
+  }
+  document.querySelectorAll('#slip input.line').forEach(inp => {
+    inp.addEventListener('focus', scheduleHW);
+    inp.addEventListener('blur', scheduleHW);
+    inp.addEventListener('change', scheduleHW);
+  });
+  window.addEventListener('resize', scheduleHW);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(scheduleHW);
+  $('btnReroll').addEventListener('click', () => {
+    hwSeed = newSeed(); scheduleHW();
+    if (currentId) { const b = bills.find(x => x.id === currentId); if (b) { b.hwSeed = hwSeed; store(BILLS_KEY, bills); } }
+    flash(hwK() ? 'Written again with a slightly different hand.' : 'Turn on Natural handwriting to see the difference.');
+  });
+
   function applyHeading() {
     const slip = $('slip');
     slip.querySelector('.logo').innerHTML = logoSvg(settings.logo);
@@ -1252,6 +1335,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       seg.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.v === settings[seg.dataset.key])));
     document.querySelectorAll('#logoGrid .logo-opt').forEach(b => b.classList.toggle('active', b.dataset.logo === settings.logo));
     document.querySelectorAll('#fontGrid .font-opt').forEach(b => b.classList.toggle('active', b.dataset.font === (settings.handFont || '')));
+    if (typeof scheduleHW === 'function') scheduleHW();
   }
   $('logoGrid').innerHTML = LOGOS.map((l, i) =>
     '<button type="button" class="logo-opt" data-logo="' + l.id + '">' + logoSvg(l.id) + '<span>' + (i + 1) + '. ' + l.name + '</span></button>').join('');
@@ -1302,10 +1386,10 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   }
   FIELDS.forEach(id => $(id).addEventListener('input', () => {
     if (CALC.includes(id)) setManual(id, $(id).value.trim() !== '');
-    recalc();
+    recalc(); scheduleHW();
   }));
   document.querySelectorAll('#slip .auto').forEach(b => b.addEventListener('click', () => {
-    setManual(b.closest('.field').querySelector('input').id, false); recalc();
+    setManual(b.closest('.field').querySelector('input').id, false); recalc(); scheduleHW();
   }));
 
   function readForm() {
@@ -1313,6 +1397,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     o.manual = CALC.filter(isManual);
     o.template = currentTpl;
     o.bataInAmount = bataIn;
+    o.hwSeed = hwSeed;
     // the operator's saved signature is stored once and referenced, to save space
     o.sigOperator = sigs.operator && sigs.operator === settings.defaultSig ? '@default' : sigs.operator;
     o.sigParty = sigs.party;
@@ -1323,6 +1408,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     currentTpl = tplById(id).id;
     applyTemplate($('slip'), currentTpl);
     $('tplName').textContent = tplById(currentTpl).name;
+    scheduleHW();
   }
   function fillForm(b) {
     FIELDS.forEach(id => $(id).value = b[id] || '');
@@ -1331,7 +1417,8 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     setTemplate(b.template || settings.template);
     setSig('operator', b.sigOperator === '@default' ? settings.defaultSig : b.sigOperator);
     setSig('party', b.sigParty, b.sigPartyAt);
-    recalc();
+    hwSeed = b.hwSeed || (b.id ? String(hashStr(b.id + (b.billNo || ''))) : newSeed());
+    recalc(); scheduleHW();
     renderBillReview();
   }
 
@@ -1406,9 +1493,11 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       span.className = inp.className;
       const v = srcInputs[i].value;
       span.textContent = (srcInputs[i].type === 'date' ? fmtDate(v) : v) || '\u200b'; // keep empty lines level
+      if (v) span.dataset.hw = srcInputs[i].id; // natural-handwriting key for the renderer
       inp.replaceWith(span);
     });
-    clone.querySelectorAll('.auto, .sig-btn').forEach(el => el.remove());
+    clone.querySelectorAll('.auto, .sig-btn, .hw-layer').forEach(el => el.remove());
+    clone.classList.remove('hw-on');
     clone.querySelectorAll('[contenteditable]').forEach(el => el.removeAttribute('contenteditable'));
     clone.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
     clone.querySelectorAll('label').forEach(el => el.removeAttribute('for'));
@@ -1451,12 +1540,25 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     const asc = m.fontBoundingBoxAscent || m.actualBoundingBoxAscent || parseFloat(cs.fontSize) * 0.8;
     const desc = m.fontBoundingBoxDescent || m.actualBoundingBoxDescent || parseFloat(cs.fontSize) * 0.2;
     const range = document.createRange();
-    graphemes(text).forEach(g => {
-      if (!g.s.trim() || g.s === '​') return;
+    const host = hwK() > 0 && node.parentElement ? node.parentElement.closest('[data-hw]') : null;
+    let L = null, hr = null, cum = 0;
+    if (host) { L = lineJitter(host.dataset.hw); hr = host.getBoundingClientRect(); }
+    graphemes(text).forEach((g, n) => {
+      const c = host ? charJitter(host.dataset.hw, n) : null;
+      if (c) cum += c.sp;
+      if (!g.s.trim() || g.s === '\u200b') return;
       range.setStart(node, g.i); range.setEnd(node, g.i + g.s.length);
       const rr = range.getClientRects()[0];
       if (!rr || !rr.width) return;
-      ctx.fillText(g.s, rr.left, rr.top + (rr.height - (asc + desc)) / 2 + asc);
+      const baseline = rr.top + (rr.height - (asc + desc)) / 2 + asc;
+      if (!host) { ctx.fillText(g.s, rr.left, baseline); return; }
+      // same maths as the on-screen handwriting layer (layoutHW)
+      const ox = hr.left, oy = hr.top + hr.height / 2, py = rr.top + rr.height * 0.7;
+      ctx.save();
+      ctx.translate(ox + L.dx, oy + L.dy); ctx.rotate(L.rot * Math.PI / 180); ctx.translate(-ox, -oy);
+      ctx.translate(rr.left + cum + c.dx, py + c.dy); ctx.rotate(c.rot * Math.PI / 180); ctx.scale(c.s, c.s);
+      ctx.fillText(g.s, 0, baseline - py);
+      ctx.restore();
     });
   }
   async function drawSvg(ctx, el, cs, r, paper, ink) {
@@ -2075,6 +2177,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     if (v === 'reviewsView') renderReviews();
     if (v === 'settingsView') loadSettingsForm();
     if (v === 'bataView') renderBata();
+    scheduleHW();
     window.scrollTo(0, 0);
   }
   document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => showView(t.dataset.view)));
@@ -2105,7 +2208,13 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   $('askNo').addEventListener('click', () => answer(false));
   $('askModal').addEventListener('click', e => { if (e.target === $('askModal')) answer(false); });
 
-  function printNow() {
+  async function printNow() {
+    // print the finished bill picture, so the printout matches the PDF/JPEG exactly
+    const opened = $('previewModal').classList.contains('hidden');
+    if (opened) await openPreview();
+    if (opened) window.addEventListener('afterprint', function done() { window.removeEventListener('afterprint', done); closePreview(); });
+    const img = $('previewImg');
+    if (img.decode) { try { await img.decode(); } catch (e) { /* print anyway */ } }
     if (AndroidApp) { AndroidApp.print(fileBase()); return; }
     if (inFrame) flash('If the print window does not open, this viewer blocks printing — open the file in Chrome or Safari.', true);
     try { window.print(); } catch (e) { flash('Printing is blocked here — open the file in Chrome or Safari.', true); }
