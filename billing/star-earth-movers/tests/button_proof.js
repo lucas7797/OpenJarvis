@@ -33,26 +33,33 @@ async function shot(title, locator, opts = {}) {
 }
 const val = (id) => P.inputValue('#' + id);
 const ls = (k) => P.evaluate((k) => window.semStorage.get(k), k);
+// Click a button that makes a file, then tap "Download" in the File ready box, like a person.
 async function download(selector) {
-  if (!viewer) {
-    const [dl] = await Promise.all([page.waitForEvent('download'), P.click(selector)]);
-    const file = path.join(outDir, 'dl-' + dl.suggestedFilename());
-    await dl.saveAs(file);
-    return { name: dl.suggestedFilename(), buf: fs.readFileSync(file), file };
-  }
-  // the viewer blocks the download itself; check the file the app produced
   const n = await P.evaluate(() => window.__blobs.length);
   await P.click(selector);
+  await P.waitForSelector('#fileModal:not(.hidden)');
   await P.waitForFunction((n) => window.__blobs.length > n, n);
-  const { name, b64 } = await P.evaluate(async () => {
-    const blob = window.__blobs[window.__blobs.length - 1];
-    const buf = new Uint8Array(await blob.arrayBuffer());
-    let bin = ''; for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
-    return { name: window.__dlName, b64: btoa(bin) };
-  });
-  const file = path.join(outDir, 'dl-' + name);
-  fs.writeFileSync(file, Buffer.from(b64, 'base64'));
-  return { name, buf: fs.readFileSync(file), file };
+  let result;
+  if (!viewer) {
+    const [dl] = await Promise.all([page.waitForEvent('download'), P.click('#fileDownload')]);
+    const file = path.join(outDir, 'dl-' + dl.suggestedFilename());
+    await dl.saveAs(file);
+    result = { name: dl.suggestedFilename(), buf: fs.readFileSync(file), file };
+  } else {
+    // the viewer blocks the download itself; check the file the app produced
+    await P.click('#fileDownload');
+    const { name, b64 } = await P.evaluate(async () => {
+      const blob = window.__blobs[window.__blobs.length - 1];
+      const buf = new Uint8Array(await blob.arrayBuffer());
+      let bin = ''; for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+      return { name: document.getElementById('fileDownload').getAttribute('download'), b64: btoa(bin) };
+    });
+    const file = path.join(outDir, 'dl-' + name);
+    fs.writeFileSync(file, Buffer.from(b64, 'base64'));
+    result = { name, buf: fs.readFileSync(file), file };
+  }
+  await P.click('#fileClose');
+  return result;
 }
 // answer the app's own "Are you sure?" box
 async function yes() { await P.waitForSelector('#askModal:not(.hidden)'); await P.click('#askYes'); }
@@ -325,7 +332,10 @@ const tab = (v) => P.click(`.tab[data-view="${v}"]`);
   await check('Preview', '"Share" in preview', async () => {
     await P.evaluate(() => { window.__shared = null; });
     await P.click('#pvShare');
+    await P.waitForSelector('#fileModal:not(.hidden)');
+    await P.click('#fileShare');
     await P.waitForFunction(() => window.__shared);
+    await P.click('#fileClose');
     return 'passes the bill image to the share sheet (simulated)';
   });
   await check('Preview', '"Print" in preview', async () => {
@@ -380,11 +390,52 @@ const tab = (v) => P.click(`.tab[data-view="${v}"]`);
     shots.push({ title: 'Downloaded JPEG of the bill', data: d.buf.toString('base64'), mime: 'image/jpeg' });
     return d.name + ' (' + Math.round(d.buf.length / 1024) + ' KB, valid JPEG)';
   });
+  await check('File ready box', 'Opens after JPEG with picture, Download, Share, Open', async () => {
+    await P.click('#btnJpg');
+    await P.waitForSelector('#fileModal:not(.hidden)');
+    const info = await P.evaluate(() => ({
+      name: document.getElementById('fileName').textContent,
+      img: document.getElementById('fileImg').getAttribute('src') || '',
+      dl: document.getElementById('fileDownload').getAttribute('download'),
+      href: document.getElementById('fileDownload').getAttribute('href'),
+      open: document.getElementById('fileOpen').getAttribute('href'),
+      share: !document.getElementById('fileShare').classList.contains('hidden'),
+    }));
+    expect(info.name.endsWith('.jpg') && info.dl === info.name, JSON.stringify(info));
+    expect(info.href.startsWith('blob:') && info.open.startsWith('blob:'), 'links not set');
+    expect(info.img.startsWith('blob:'), 'picture not shown');
+    expect(info.share, 'share button hidden');
+    return info.name + ' — picture shown (press-and-hold to save), Download / Share / Open ready';
+  });
+  await shot('"File ready" box (phone-friendly download)', P.locator('#fileModal .modal-box'));
+  await check('File ready box', '"Download not working? Try this link" (backup link)', async () => {
+    await P.waitForFunction(() => document.getElementById('fileAlt').getAttribute('href').startsWith('data:image/jpeg'));
+    if (!viewer) {
+      const [dl] = await Promise.all([page.waitForEvent('download'), P.click('#fileAlt')]);
+      expect(dl.suggestedFilename().endsWith('.jpg'), dl.suggestedFilename());
+      return 'second way to download works (' + dl.suggestedFilename() + ')';
+    }
+    return 'backup link prepared (download itself is blocked by the viewer)';
+  });
+  await check('File ready box', '"Where do downloaded files go?" help', async () => {
+    await P.click('#fileModal .file-help summary');
+    const t = await P.textContent('#fileModal .file-help');
+    expect(t.includes('Android') && t.includes('iPhone'), t);
+    return 'explains Downloads folder on Android, iPhone and computer';
+  });
+  await check('File ready box', 'Close with ✕', async () => {
+    await P.click('#fileClose');
+    expect(!(await P.isVisible('#fileModal')), 'still open');
+    return 'closes';
+  });
   await check('Bill', '"Share" button', async () => {
     expect(await P.isVisible('#btnShare'), 'button hidden');
     await P.click('#btnShare');
+    await P.waitForSelector('#fileModal:not(.hidden)');
+    await P.click('#fileShare');
     await P.waitForFunction(() => window.__shared);
     const s = await P.evaluate(() => window.__shared);
+    await P.click('#fileClose');
     expect(s.n === 1 && s.name.endsWith('.jpg') && s.size > 10000, JSON.stringify(s));
     return 'passes ' + s.name + ' to the phone share sheet (simulated)';
   });
