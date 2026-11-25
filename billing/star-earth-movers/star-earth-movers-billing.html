@@ -1040,6 +1040,8 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   catch (e) { storageOk = !!(e && e.name === 'QuotaExceededError'); }
   // read-only access for backups/tests: window.semStorage.get('sem_bills_v1')
   window.semStorage = { get: (k) => load(k, null) };
+  // Set when the page runs inside the Android app (APK); gives real Downloads, Share and Print.
+  const AndroidApp = window.AndroidBridge || null;
   const inFrame = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
 
   function load(key, fallback) {
@@ -1507,13 +1509,29 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     $('fileImg').classList.toggle('hidden', !isImg);
     $('fileImgHint').classList.toggle('hidden', !isImg);
     if (isImg) $('fileImg').src = fileUrl; else $('fileImg').removeAttribute('src');
-    $('fileShare').classList.toggle('hidden', !canShareFile(new File([blob], name, { type: blob.type })));
+    $('fileShare').classList.toggle('hidden', !AndroidApp && !canShareFile(new File([blob], name, { type: blob.type })));
+    if (AndroidApp) {
+      // inside the app: Download saves straight to the phone's Downloads folder
+      $('fileOpen').classList.add('hidden'); $('fileAlt').classList.add('hidden');
+      $('fileImgHint').classList.add('hidden');
+      $('fileDownload').textContent = '⬇ Save to phone (Downloads)';
+      $('fileShare').textContent = 'Share (WhatsApp, Gmail, Drive…)';
+    }
     $('fileModal').classList.remove('hidden');
   }
   function closeFile() { $('fileModal').classList.add('hidden'); }
   $('fileClose').addEventListener('click', closeFile);
   $('fileModal').addEventListener('click', e => { if (e.target === $('fileModal')) closeFile(); });
-  ['fileDownload', 'fileAlt'].forEach(id => $(id).addEventListener('click', e => {
+  const blobToBase64 = (blob) => new Promise((res, rej) => {
+    const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1]); r.onerror = () => rej(r.error); r.readAsDataURL(blob);
+  });
+  ['fileDownload', 'fileAlt'].forEach(id => $(id).addEventListener('click', async e => {
+    if (AndroidApp) {
+      e.preventDefault();
+      const msg = AndroidApp.saveFile(await blobToBase64(fileBlob), fileNameCur, fileBlob.type || 'application/octet-stream');
+      flash(msg, /^(Could|Not)/.test(msg));
+      return;
+    }
     if ($(id).getAttribute('href') === '#') { e.preventDefault(); flash('One moment — preparing the file…'); return; }
     flash(inFrame
       ? 'Downloading… If nothing appears, this viewer app blocks downloads — use Share / Save to phone, or open the page in Chrome or Safari.'
@@ -1521,6 +1539,11 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   }));
   $('fileOpen').addEventListener('click', () => { if (inFrame) flash('If nothing opens, this viewer blocks new windows — use Download or Share.', true); });
   $('fileShare').addEventListener('click', async () => {
+    if (AndroidApp) {
+      const r = AndroidApp.shareFile(await blobToBase64(fileBlob), fileNameCur, fileBlob.type || 'application/octet-stream');
+      if (r !== 'ok') flash(r, true);
+      return;
+    }
     try {
       await navigator.share({ files: [new File([fileBlob], fileNameCur, { type: fileBlob.type })], title: fileNameCur });
     } catch (e) {
@@ -1537,7 +1560,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
     saveBlob(await makeJpgBlob(), fileBase() + '.jpg', 'JPEG ready');
   }));
   // Share button only where the phone can share files (WhatsApp, Drive, Files…)
-  if (canShareFile(new File([''], 'x.jpg', { type: 'image/jpeg' }))) {
+  if (AndroidApp || canShareFile(new File([''], 'x.jpg', { type: 'image/jpeg' }))) {
     $('btnShare').classList.remove('hidden'); $('pvShare').classList.remove('hidden');
   }
   $('btnShare').addEventListener('click', e => withBusy(e.currentTarget, async () => {
@@ -2030,6 +2053,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
   $('askModal').addEventListener('click', e => { if (e.target === $('askModal')) answer(false); });
 
   function printNow() {
+    if (AndroidApp) { AndroidApp.print(fileBase()); return; }
     if (inFrame) flash('If the print window does not open, this viewer blocks printing — open the file in Chrome or Safari.', true);
     try { window.print(); } catch (e) { flash('Printing is blocked here — open the file in Chrome or Safari.', true); }
   }
@@ -2042,6 +2066,18 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
       '(save the file to your phone, then open it with the browser).';
     b.classList.remove('hidden');
   }
+
+  // Called by the Android app: messages, and the phone's Back button
+  window.semNotify = (msg, bad) => flash(msg, bad);
+  window.semBack = () => {
+    const open = (id) => !$(id).classList.contains('hidden');
+    if (open('askModal')) answer(false);
+    else if (open('signModal')) closeSign();
+    else if (open('fileModal')) closeFile();
+    else if (open('previewModal')) closePreview();
+    else if ($('billView').classList.contains('hidden')) showView('billView');
+    else if (AndroidApp) AndroidApp.exitApp();
+  };
 
   $('btnNew').addEventListener('click', newBill);
   $('btnSave').addEventListener('click', () => saveBill());
