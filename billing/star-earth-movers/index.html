@@ -5,6 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Star Earth Movers Billing</title>
 <style>
+  /* 10 handwriting fonts for the filled-in values (embedded; see fonts/LICENSES.txt) */
+  @font-face { font-family: 'SEM Caveat'; src: url('fonts/caveat.woff2') format('woff2'); font-display: block; }
+  @font-face { font-family: 'SEM Kalam'; src: url('fonts/kalam.woff2') format('woff2'); font-display: block; }
+  @font-face { font-family: 'SEM Patrick Hand'; src: url('fonts/patrick-hand.woff2') format('woff2'); font-display: block; }
+  @font-face { font-family: 'SEM Indie Flower'; src: url('fonts/indie-flower.woff2') format('woff2'); font-display: block; }
+  @font-face { font-family: 'SEM Shadows Into Light'; src: url('fonts/shadows-into-light.woff2') format('woff2'); font-display: block; }
+  @font-face { font-family: 'SEM Dancing Script'; src: url('fonts/dancing-script.woff2') format('woff2'); font-display: block; }
+  @font-face { font-family: 'SEM Gochi Hand'; src: url('fonts/gochi-hand.woff2') format('woff2'); font-display: block; }
+  @font-face { font-family: 'SEM Architects Daughter'; src: url('fonts/architects-daughter.woff2') format('woff2'); font-display: block; }
+  @font-face { font-family: 'SEM Homemade Apple'; src: url('fonts/homemade-apple.woff2') format('woff2'); font-display: block; }
+  @font-face { font-family: 'SEM Satisfy'; src: url('fonts/satisfy.woff2') format('woff2'); font-display: block; }
   :root {
     --bg: #2b2734;
     --panel: #ffffff;
@@ -111,7 +122,7 @@
 
   .line {
     flex: 1; min-width: 0; display: block;
-    font-family: var(--hand-font); font-size: 19px; color: var(--hand);
+    font-family: var(--hand-font); font-size: calc(19px * var(--hand-scale, 1)); color: var(--hand);
     background: transparent; border: none; border-bottom: 2px dotted var(--ink);
     padding: 2px 4px; min-height: 31px; line-height: 1.4;
   }
@@ -264,6 +275,11 @@
   .logo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
   .logo-opt { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 4px; border: 2px solid #ddd; border-radius: 8px; background: #fafafa; color: #3b2a6b; --paper: #fafafa; --ink: #3b2a6b; font-size: 12px; }
   .logo-opt svg { width: 80px; height: 50px; }
+  .font-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  .font-opt { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 8px 10px; border: 2px solid #ddd; border-radius: 8px; background: #fafafa; color: #1f2a55; text-align: left; }
+  .font-opt .sample { font-size: 22px; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .font-opt .fname { font-size: 11px; color: #666; font-family: Arial, sans-serif; }
+  .font-opt.active { border-color: #7b5cff; box-shadow: 0 0 0 3px #7b5cff33; }
   .logo-opt.active { border-color: #7b5cff; box-shadow: 0 0 0 3px #7b5cff33; }
 
   /* Phone layout for the bill on screen only (.wrap). Saved files and prints are drawn
@@ -284,7 +300,7 @@
     .wrap .sign { padding: 30px 10px 10px; font-size: 14px; }
     .wrap .sign .line { width: 130px; }
     .wrap .sig-area { width: 140px; height: 56px; } .wrap .sig-img { max-width: 140px; max-height: 56px; }
-    .wrap .line { font-size: 17px; }
+    .wrap .line { font-size: calc(17px * var(--hand-scale, 1)); }
     .wrap .slip.layout-boxed .body { padding: 14px 8px; }
   }
   /* the export stage and thumbnails always use the full-size layout */
@@ -399,7 +415,7 @@
     </div>
 
     <details class="panel no-print" id="headingPanel">
-      <summary>Heading alignment &amp; logo</summary>
+      <summary>Heading, handwriting &amp; logo</summary>
       <div class="ctl"><span>Logo position</span>
         <div class="seg" data-key="logoPos"><button data-v="left">Left</button><button data-v="right">Right</button><button data-v="top">Above title</button><button data-v="none">No logo</button></div></div>
       <div class="ctl"><span>Title alignment</span>
@@ -408,6 +424,8 @@
         <div class="seg" data-key="contactAlign"><button data-v="auto">Auto</button><button data-v="left">Left</button><button data-v="center">Centre</button><button data-v="right">Right</button></div></div>
       <div class="ctl"><span>Title size</span>
         <div class="seg" data-key="titleSize"><button data-v="s">Small</button><button data-v="m">Medium</button><button data-v="l">Large</button></div></div>
+      <div class="ctl"><span>Handwriting style (filled-in values)</span></div>
+      <div class="font-grid" id="fontGrid"></div>
       <div class="ctl"><span>Logo (15 designs)</span></div>
       <div class="logo-grid" id="logoGrid"></div>
       <div style="margin-top:12px"><button id="btnResetAlign">Reset alignment</button></div>
@@ -684,6 +702,22 @@
   ];
   const tplById = (id) => TEMPLATES.find(t => t.id === id) || TEMPLATES[0];
 
+  // 10 handwriting styles; scale evens out how big each font looks
+  const HAND_FONTS = [
+    { id: 'caveat', name: 'Caveat', scale: 1.35 },
+    { id: 'kalam', name: 'Kalam', scale: 1.0 },
+    { id: 'patrick-hand', name: 'Patrick Hand', scale: 1.1 },
+    { id: 'indie-flower', name: 'Indie Flower', scale: 1.05 },
+    { id: 'shadows-into-light', name: 'Shadows Into Light', scale: 1.1 },
+    { id: 'dancing-script', name: 'Dancing Script', scale: 1.15 },
+    { id: 'gochi-hand', name: 'Gochi Hand', scale: 1.1 },
+    { id: 'architects-daughter', name: 'Architects Daughter', scale: 0.95 },
+    { id: 'homemade-apple', name: 'Homemade Apple', scale: 1.0 },
+    { id: 'satisfy', name: 'Satisfy', scale: 1.1 }
+  ];
+  const handFontById = (id) => HAND_FONTS.find(f => f.id === id) || null;
+  const handFamily = (f) => '"SEM ' + f.name + '", ' + HAND;
+
   function applyTemplate(slip, id) {
     const t = tplById(id);
     TEMPLATES.forEach(x => slip.classList.remove('layout-' + x.layout));
@@ -693,7 +727,9 @@
     slip.style.setProperty('--hand', t.hand);
     slip.style.setProperty('--brand-font', t.brand);
     slip.style.setProperty('--body-font', t.body || SANS);
-    slip.style.setProperty('--hand-font', t.handFont || HAND);
+    const hf = typeof settings !== 'undefined' ? handFontById(settings.handFont) : null;
+    slip.style.setProperty('--hand-font', hf ? handFamily(hf) : (t.handFont || HAND));
+    slip.style.setProperty('--hand-scale', hf ? hf.scale : 1);
   }
 
   // ---------- Settings & editable header ----------
@@ -793,6 +829,18 @@
   const HEAD_DEFAULTS = { logo: 'excavator', logoPos: 'left', titleAlign: 'center', contactAlign: 'auto', titleSize: 'm' };
   Object.keys(HEAD_DEFAULTS).forEach(k => { if (settings[k] == null) settings[k] = HEAD_DEFAULTS[k]; });
 
+  if (settings.handFont == null) settings.handFont = '';
+  $('fontGrid').innerHTML = '<button type="button" class="font-opt" data-font=""><span class="sample" style="font-family:' + HAND.replace(/"/g, "'") + '">Ravi Constructions 1250.5</span><span class="fname">0. Template default</span></button>' +
+    HAND_FONTS.map((f, i) => '<button type="button" class="font-opt" data-font="' + f.id + '"><span class="sample" style="font-family:' +
+      handFamily(f).replace(/"/g, "'") + ';font-size:' + Math.round(22 * f.scale) + 'px">Ravi Constructions 1250.5</span><span class="fname">' + (i + 1) + '. ' + f.name + '</span></button>').join('');
+  $('fontGrid').addEventListener('click', e => {
+    const b = e.target.closest('.font-opt'); if (!b) return;
+    settings.handFont = b.dataset.font; store(SETTINGS_KEY, settings);
+    setTemplate(currentTpl); applyHeading();
+    const f = handFontById(settings.handFont);
+    flash('Handwriting: ' + (f ? f.name : 'template default') + '.');
+  });
+
   function applyHeading() {
     const slip = $('slip');
     slip.querySelector('.logo').innerHTML = logoSvg(settings.logo);
@@ -803,6 +851,7 @@
     document.querySelectorAll('#headingPanel .seg').forEach(seg =>
       seg.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.v === settings[seg.dataset.key])));
     document.querySelectorAll('#logoGrid .logo-opt').forEach(b => b.classList.toggle('active', b.dataset.logo === settings.logo));
+    document.querySelectorAll('#fontGrid .font-opt').forEach(b => b.classList.toggle('active', b.dataset.font === (settings.handFont || '')));
   }
   $('logoGrid').innerHTML = LOGOS.map((l, i) =>
     '<button type="button" class="logo-opt" data-logo="' + l.id + '">' + logoSvg(l.id) + '<span>' + (i + 1) + '. ' + l.name + '</span></button>').join('');
@@ -1042,7 +1091,11 @@
     const clone = staticSlip();
     stage.appendChild(clone);
     try {
-      if (document.fonts && document.fonts.ready) await document.fonts.ready;
+      if (document.fonts) {
+        const hf = handFontById(settings.handFont);
+        if (hf) { try { await document.fonts.load('20px "SEM ' + hf.name + '"', 'Ab1'); } catch (e) { /* fall back */ } }
+        if (document.fonts.ready) await document.fonts.ready;
+      }
       const root = clone.getBoundingClientRect(), scale = 2;
       const canvas = document.createElement('canvas');
       canvas.width = Math.ceil(root.width * scale); canvas.height = Math.ceil(root.height * scale);

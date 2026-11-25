@@ -170,6 +170,37 @@ const tab = (v) => P.click(`.tab[data-view="${v}"]`);
     });
   }
   await shot('All 15 logos', P.locator('#logoGrid'));
+
+  // ---------- 10 handwriting fonts ----------
+  const fontCount = await P.locator('.font-opt').count();
+  await check('Handwriting', 'Picker has 10 handwriting styles (+ template default)', async () => {
+    expect(fontCount === 11, 'found ' + fontCount);
+    return '10 styles + default';
+  });
+  for (let i = 1; i < fontCount; i++) {
+    const name = (await P.locator('.font-opt .fname').nth(i).textContent()).trim();
+    await check('Handwriting', `Font ${name}`, async () => {
+      await P.locator('.font-opt').nth(i).click();
+      const r = await P.evaluate(() => {
+        const fam = getComputedStyle(document.querySelector('#party')).fontFamily.split(',')[0];
+        return { fam, loaded: document.fonts.check('20px ' + fam) };
+      });
+      expect(r.fam.includes('SEM '), 'not applied: ' + r.fam);
+      expect(r.loaded, 'font file not loaded');
+      const saved = (await ls('sem_settings_v1')).handFont;
+      expect(saved, 'not saved');
+      return r.fam.replace(/"/g, '') + ' applied, font loaded, saved';
+    });
+  }
+  await shot('10 handwriting styles', P.locator('#fontGrid'));
+  await check('Handwriting', '"Template default" button', async () => {
+    await P.locator('.font-opt').first().click();
+    const fam = await P.evaluate(() => getComputedStyle(document.querySelector('#party')).fontFamily);
+    expect(!fam.includes('SEM '), fam);
+    expect((await ls('sem_settings_v1')).handFont === '', 'not saved');
+    return 'back to the template\'s own handwriting';
+  });
+  await P.locator('.font-opt[data-font="kalam"]').click();
   await P.locator('.logo-opt').first().click();
 
   // ---------- Editable heading text ----------

@@ -2,6 +2,7 @@
 
 Usage: python build_standalone.py [output.html]
 """
+import base64
 import pathlib
 import re
 import sys
@@ -17,5 +18,13 @@ def inline(match):
 
 
 html = re.sub(r'<script src="(vendor/[^"]+)"></script>', inline, html)
+
+
+def inline_font(match):
+    data = base64.b64encode((here / match.group(1)).read_bytes()).decode()
+    return "url('data:font/woff2;base64," + data + "')"
+
+
+html = re.sub(r"url\('(fonts/[^']+\.woff2)'\)", inline_font, html)
 out.write_text(html, encoding="utf-8")
 print(f"wrote {out} ({out.stat().st_size // 1024} KB)")
