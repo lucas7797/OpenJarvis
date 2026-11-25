@@ -596,6 +596,89 @@ const tab = (v) => P.click(`.tab[data-view="${v}"]`);
     return 'heading back to STAR';
   });
 
+  // ---------- Driver bata ----------
+  await check('Driver Bata', 'Default bata in Settings fills new bills', async () => {
+    await tab('settingsView');
+    await P.fill('#setBata', '300'); await P.check('#setBataInAmount'); await P.click('#btnSaveSettings');
+    await tab('billView'); await P.click('#btnNew');
+    expect(await val('bata') === '300', 'bata field: ' + await val('bata'));
+    return 'new bill starts with Driver Bata 300';
+  });
+  await check('Driver Bata', 'Bata added to Amount and Balance', async () => {
+    await P.fill('#party', 'Bata Test One'); await P.fill('#operator', 'Murugan');
+    await P.fill('#startMeter', '0'); await P.fill('#closeMeter', '5'); await P.fill('#rate', '1000'); await P.fill('#advance', '1000');
+    const a = await val('amount'), b = await val('balance');
+    expect(a === '5300' && b === '4300', a + ' / ' + b);
+    await P.click('#btnSave');
+    return '5 h × 1000 + bata 300 = Amount 5300, Balance 4300';
+  });
+  await check('Driver Bata', '"Driver Bata" line printed on the bill', async () => {
+    await P.click('#btnPreview'); await P.waitForSelector('#previewImg:not(.hidden)');
+    const txt = await P.evaluate(() => [...document.querySelectorAll('#slip .field label')].map((l) => l.textContent).join('|'));
+    await P.click('#previewClose');
+    expect(txt.includes('Driver Bata'), txt);
+    return 'shown between R / H and Amount';
+  });
+  await P.click('#btnNew');
+  await P.fill('#party', 'Bata Test Two'); await P.fill('#operator', 'Selvam'); await P.fill('#rate', '900');
+  await P.fill('#startMeter', '0'); await P.fill('#closeMeter', '2'); await P.fill('#bata', '250'); await P.click('#btnSave');
+  await check('Driver Bata', 'Tab "Driver Bata"', async () => {
+    await tab('bataView');
+    const rows = await P.locator('#bataRows tr').count();
+    const cards = await P.textContent('#bataCards');
+    expect(rows === 2, rows + ' rows');
+    expect(cards.includes('Murugan') && cards.includes('Selvam'), cards);
+    return '2 bills with bata, one card per driver (Murugan, Selvam)';
+  });
+  await shot('Driver Bata screen', P.locator('#bataView'));
+  await check('Driver Bata', '"Paid to driver" tick box', async () => {
+    await P.locator('#bataRows tr', { hasText: 'Selvam' }).locator('input[type=checkbox]').check();
+    let b = (await ls('sem_bills_v1')).find((x) => x.party === 'Bata Test Two');
+    expect(b.bataPaid === true && b.bataPaidOn, 'not stored');
+    await P.locator('#bataRows tr', { hasText: 'Selvam' }).locator('input[type=checkbox]').uncheck();
+    b = (await ls('sem_bills_v1')).find((x) => x.party === 'Bata Test Two');
+    expect(!b.bataPaid, 'untick not stored');
+    return 'tick saves "paid" with the date, untick reverses it';
+  });
+  await check('Driver Bata', 'Search and Paid / Not-paid filter', async () => {
+    await P.fill('#bataSearch', 'selvam');
+    const n1 = await P.locator('#bataRows tr').count();
+    await P.fill('#bataSearch', '');
+    await P.selectOption('#bataStatus', 'paid');
+    const empty = await P.textContent('#bataRows');
+    await P.selectOption('#bataStatus', 'all');
+    expect(n1 === 1 && empty.includes('No driver bata'), n1 + ' / ' + empty);
+    return '"selvam" → 1 row; "Paid to driver" → none yet';
+  });
+  await check('Driver Bata', '"Mark all shown as paid" button', async () => {
+    await P.click('#btnBataPayAll'); await yes();
+    const withBata = (await ls('sem_bills_v1')).filter((x) => Number(x.bata) > 0);
+    expect(withBata.length === 2 && withBata.every((x) => x.bataPaid), 'not all paid');
+    expect((await P.textContent('#bataCards')).includes('All paid'), 'cards not updated');
+    return '₹550 of bata marked paid; cards show "All paid"';
+  });
+  await check('Driver Bata', '"Export bata CSV" button', async () => {
+    const d = await download('#btnBataCsv');
+    const csv = d.buf.toString('utf8');
+    expect(csv.includes('Murugan') && csv.includes('Selvam') && csv.includes('yes'), csv.slice(0, 200));
+    return d.name;
+  });
+  await check('Driver Bata', 'Bata column in All Bills', async () => {
+    await tab('registerView');
+    const foot = await P.textContent('#billFoot');
+    expect(foot.includes('550'), foot);
+    return 'Bata column with total 550';
+  });
+  await check('Driver Bata', '"Add bata to amount" switched off', async () => {
+    await tab('settingsView'); await P.uncheck('#setBataInAmount'); await P.click('#btnSaveSettings');
+    await tab('billView'); await P.click('#btnNew');
+    await P.fill('#startMeter', '0'); await P.fill('#closeMeter', '5'); await P.fill('#rate', '1000');
+    const a = await val('amount');
+    await tab('settingsView'); await P.fill('#setBata', ''); await P.check('#setBataInAmount'); await P.click('#btnSaveSettings');
+    expect(a === '5000', a);
+    return 'Amount 5000 — bata kept for the driver but not charged to the party';
+  });
+
   // ---------- Phone layout ----------
   if (!viewer) {
   await page.setViewportSize({ width: 390, height: 900 });

@@ -149,6 +149,11 @@
   .sig-hint { font-size: 13px; color: #666; margin-top: 6px; }
   .pen.active { background: #7b5cff; color: #fff; }
   .pill.signed { background: #e8eefc; color: #1c2f6e; }
+  .bata-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; margin-bottom: 14px; }
+  .bata-card { border: 1px solid #e2dcf5; border-radius: 8px; padding: 10px 12px; background: #faf8ff; font-size: 13px; line-height: 1.6; }
+  .bata-card .who { font-weight: 700; color: var(--accent); font-size: 15px; }
+  .bata-card .due { color: var(--danger); font-weight: 700; }
+  .bata-card .ok { color: var(--ok); }
   .saved-sig { display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 8px; border: 1px dashed #ccc; border-radius: 6px; background: #fff; }
   .saved-sig img { max-height: 60px; max-width: 220px; }
 
@@ -301,6 +306,7 @@
   <button class="tab" data-view="registerView">All Bills</button>
   <button class="tab" data-view="templatesView">Templates</button>
   <button class="tab" data-view="reviewsView">Reviews</button>
+  <button class="tab" data-view="bataView">Driver Bata</button>
   <button class="tab" data-view="settingsView">Settings</button>
   <span class="spacer"></span>
   <span class="actions" id="billActions">
@@ -352,6 +358,7 @@
           <div class="field computed"><label for="running" contenteditable="true" data-setting="lblRunning">Running</label><span class="colon">:</span><input class="line" id="running" inputmode="decimal"><button class="auto" title="Back to automatic">↺</button></div>
           <div class="field computed"><label for="total" contenteditable="true" data-setting="lblTotal">Total</label><span class="colon">:</span><input class="line" id="total" inputmode="decimal"><button class="auto" title="Back to automatic">↺</button></div>
           <div class="field"><label for="rate" contenteditable="true" data-setting="lblRate">R / H</label><span class="colon">:</span><input class="line" id="rate" inputmode="decimal"><span></span></div>
+          <div class="field"><label for="bata" contenteditable="true" data-setting="lblBata">Driver Bata</label><span class="colon">:</span><input class="line" id="bata" inputmode="decimal"><span></span></div>
           <div class="field computed"><label for="amount" contenteditable="true" data-setting="lblAmount">Amount</label><span class="colon">:</span><input class="line" id="amount" inputmode="decimal"><button class="auto" title="Back to automatic">↺</button></div>
           <div class="field"><label for="advance" contenteditable="true" data-setting="lblAdvance">Advance</label><span class="colon">:</span><input class="line" id="advance" inputmode="decimal"><span></span></div>
           <div class="field computed"><label for="balance" contenteditable="true" data-setting="lblBalance">Balance</label><span class="colon">:</span><input class="line" id="balance" inputmode="decimal"><button class="auto" title="Back to automatic">↺</button></div>
@@ -377,7 +384,7 @@
 
     <div class="hint">
       Every field and every printed word on the slip can be edited — click the heading, phone numbers or labels to change them (saved automatically).
-      Running = Closing − Starting, Total = Running, Amount = Total × R/H, Balance = Amount − Advance.
+      Running = Closing − Starting, Total = Running, Amount = Total × R/H + Driver Bata, Balance = Amount − Advance.
       Type over any calculated value to change it; press ↺ to go back to the automatic figure.
       Template: <b id="tplName"></b> (change it in Templates).
     </div>
@@ -423,7 +430,7 @@
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>No.</th><th>Date</th><th>M/s.</th><th class="num">Hours</th><th class="num">R/H</th><th class="num">Amount</th><th class="num">Advance</th><th class="num">Balance</th><th></th><th>Review</th><th></th></tr>
+            <tr><th>No.</th><th>Date</th><th>M/s.</th><th class="num">Hours</th><th class="num">R/H</th><th class="num">Bata</th><th class="num">Amount</th><th class="num">Advance</th><th class="num">Balance</th><th></th><th>Review</th><th></th></tr>
           </thead>
           <tbody id="billRows"></tbody>
           <tfoot id="billFoot"></tfoot>
@@ -475,6 +482,32 @@
     </div>
   </section>
 
+  <!-- ================= DRIVER BATA ================= -->
+  <section id="bataView" class="hidden">
+    <div class="panel">
+      <h2>Driver Bata</h2>
+      <p style="margin:0 0 12px;color:#666;font-size:14px">Bata from every saved bill, grouped by the operator / driver name written on the bill. Tick a row when the bata has been paid to the driver.</p>
+      <div class="filters">
+        <input id="bataSearch" placeholder="Search driver / party">
+        <select id="bataStatus"><option value="all">All</option><option value="unpaid">Not paid to driver</option><option value="paid">Paid to driver</option></select>
+        <input id="bataFrom" type="date" title="From date">
+        <input id="bataTo" type="date" title="To date">
+      </div>
+      <div class="bata-cards" id="bataCards"></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Date</th><th>No.</th><th>M/s.</th><th>Driver</th><th class="num">Bata</th><th>Paid to driver</th><th></th></tr></thead>
+          <tbody id="bataRows"></tbody>
+          <tfoot id="bataFoot"></tfoot>
+        </table>
+      </div>
+      <div class="filters" style="margin-top:14px">
+        <button id="btnBataPayAll">Mark all shown as paid</button>
+        <button id="btnBataCsv">Export bata CSV</button>
+      </div>
+    </div>
+  </section>
+
   <!-- ================= SETTINGS ================= -->
   <section id="settingsView" class="hidden">
     <div class="panel settings">
@@ -485,6 +518,9 @@
       <input id="setCurrency">
       <label for="setOperator">Default operator name</label>
       <input id="setOperator">
+      <label for="setBata">Default driver bata for new bills (leave empty for none)</label>
+      <input id="setBata" inputmode="decimal">
+      <label style="display:flex;gap:8px;align-items:center;color:#222;font-size:14px"><input type="checkbox" id="setBataInAmount" style="width:auto"> Add driver bata to the bill amount (party pays it)</label>
       <label>My saved signature (operator)</label>
       <div class="saved-sig"><img id="savedSigImg" alt="Saved signature" class="hidden"><span id="noSavedSig" style="font-size:13px;color:#666">None saved. Tap "✍ Sign" on a bill, sign, then press "Save as my signature".</span></div>
       <label style="display:flex;gap:8px;align-items:center;color:#222;font-size:14px"><input type="checkbox" id="setAutoSign" style="width:auto"> Put my saved signature on every new bill automatically</label>
@@ -626,7 +662,7 @@
   const defaultText = {};
   document.querySelectorAll('[data-setting]').forEach(el => { defaultText[el.dataset.setting] = el.textContent; });
 
-  let settings = Object.assign({ nextNo: 50, currency: '₹', operator: '', text: {}, template: 'pink', defaultSig: '', autoSign: true }, load(SETTINGS_KEY, {}));
+  let settings = Object.assign({ nextNo: 50, currency: '₹', operator: '', text: {}, template: 'pink', defaultSig: '', autoSign: true, defaultBata: '', bataInAmount: true }, load(SETTINGS_KEY, {}));
   function applyText() {
     document.querySelectorAll('#slip [data-setting]').forEach(el => {
       const k = el.dataset.setting;
@@ -753,7 +789,8 @@
   let currentId = null;
   let currentTpl = settings.template;
 
-  const FIELDS = ['billNo','billDate','party','address','startMeter','closeMeter','running','total','rate','amount','advance','balance','operator','partySign'];
+  const FIELDS = ['billNo','billDate','party','address','startMeter','closeMeter','running','total','rate','bata','amount','advance','balance','operator','partySign'];
+  let bataIn = true; // whether this bill's bata is added to the amount
   const CALC = ['running','total','amount','balance'];
 
   const num = (v) => { const n = parseFloat(String(v).replace(/,/g, '')); return isNaN(n) ? null : n; };
@@ -771,7 +808,8 @@
     if (!isManual('running')) $('running').value = (s != null && c != null) ? fmt(c - s) : '';
     if (!isManual('total')) $('total').value = $('running').value;
     const t = num($('total').value), r = num($('rate').value);
-    if (!isManual('amount')) $('amount').value = (t != null && r != null) ? fmt(t * r) : '';
+    const bata = bataIn ? num($('bata').value) : null;
+    if (!isManual('amount')) $('amount').value = (t != null && r != null) || bata != null ? fmt((t != null && r != null ? t * r : 0) + (bata || 0)) : '';
     const a = num($('amount').value), adv = num($('advance').value);
     if (!isManual('balance')) $('balance').value = a != null ? fmt(a - (adv || 0)) : '';
   }
@@ -787,6 +825,7 @@
     const o = {}; FIELDS.forEach(id => o[id] = $(id).value.trim());
     o.manual = CALC.filter(isManual);
     o.template = currentTpl;
+    o.bataInAmount = bataIn;
     // the operator's saved signature is stored once and referenced, to save space
     o.sigOperator = sigs.operator && sigs.operator === settings.defaultSig ? '@default' : sigs.operator;
     o.sigParty = sigs.party;
@@ -801,6 +840,7 @@
   function fillForm(b) {
     FIELDS.forEach(id => $(id).value = b[id] || '');
     CALC.forEach(id => setManual(id, (b.manual || []).includes(id)));
+    bataIn = b.bataInAmount != null ? b.bataInAmount : settings.bataInAmount;
     setTemplate(b.template || settings.template);
     setSig('operator', b.sigOperator === '@default' ? settings.defaultSig : b.sigOperator);
     setSig('party', b.sigParty, b.sigPartyAt);
@@ -810,7 +850,7 @@
 
   function newBill() {
     currentId = null;
-    fillForm({ billNo: String(settings.nextNo), billDate: today(), operator: settings.operator,
+    fillForm({ billNo: String(settings.nextNo), billDate: today(), operator: settings.operator, bata: settings.defaultBata || '',
       sigOperator: settings.autoSign && settings.defaultSig ? '@default' : '' });
     $('btnDelete').classList.add('hidden');
     updateParties();
@@ -1343,17 +1383,17 @@
   function renderRegister() {
     const list = filtered();
     if (!list.length) {
-      $('billRows').innerHTML = '<tr><td colspan="11" class="empty">No bills yet.</td></tr>';
+      $('billRows').innerHTML = '<tr><td colspan="12" class="empty">No bills yet.</td></tr>';
       $('billFoot').innerHTML = ''; return;
     }
-    let tH = 0, tA = 0, tAdv = 0, tBal = 0;
+    let tH = 0, tA = 0, tAdv = 0, tBal = 0, tB = 0;
     $('billRows').innerHTML = list.map(b => {
-      tH += num(b.total) || 0; tA += num(b.amount) || 0; tAdv += num(b.advance) || 0; tBal += num(b.balance) || 0;
+      tB += num(b.bata) || 0; tH += num(b.total) || 0; tA += num(b.amount) || 0; tAdv += num(b.advance) || 0; tBal += num(b.balance) || 0;
       const bal = num(b.balance) || 0;
       const r = reviews.find(x => x.billId === b.id);
       return '<tr>' +
         '<td>' + esc(b.billNo) + '</td><td>' + fmtDate(b.billDate) + '</td><td>' + esc(b.party) + '</td>' +
-        '<td class="num">' + esc(b.total) + '</td><td class="num">' + esc(b.rate) + '</td>' +
+        '<td class="num">' + esc(b.total) + '</td><td class="num">' + esc(b.rate) + '</td><td class="num">' + money(b.bata) + '</td>' +
         '<td class="num">' + money(b.amount) + '</td><td class="num">' + money(b.advance) + '</td>' +
         '<td class="num">' + money(b.balance) + '</td>' +
         '<td>' + (bal > 0 ? '<span class="pill due">Due</span>' : '<span class="pill paid">Paid</span>') +
@@ -1363,7 +1403,7 @@
         '</tr>';
     }).join('');
     $('billFoot').innerHTML = '<tr><td colspan="3">' + list.length + ' bill(s)</td><td class="num">' + fmt(tH) +
-      '</td><td></td><td class="num">' + money(tA) + '</td><td class="num">' + money(tAdv) + '</td><td class="num">' + money(tBal) + '</td><td colspan="3"></td></tr>';
+      '</td><td></td><td class="num">' + money(tB) + '</td><td class="num">' + money(tA) + '</td><td class="num">' + money(tAdv) + '</td><td class="num">' + money(tBal) + '</td><td colspan="3"></td></tr>';
   }
   $('billRows').addEventListener('click', e => {
     if (e.target.dataset.open) openBill(e.target.dataset.open);
@@ -1374,7 +1414,7 @@
 
   function downloadText(name, text, type) { saveBlob(new Blob([text], { type }), name); }
   $('btnCsv').addEventListener('click', () => {
-    const cols = ['billNo','billDate','party','address','startMeter','closeMeter','running','total','rate','amount','advance','balance','operator'];
+    const cols = ['billNo','billDate','party','address','startMeter','closeMeter','running','total','rate','bata','amount','advance','balance','operator'];
     const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
     const csv = [cols.concat(['rating', 'review', 'party signed']).join(',')].concat(filtered().map(b => {
       const r = reviews.find(x => x.billId === b.id);
@@ -1400,15 +1440,80 @@
     e.target.value = '';
   });
 
+  // ---------- Driver bata ----------
+  const driverOf = (b) => (b.operator || '').trim() || '(no driver name)';
+  function bataList() {
+    const q = $('bataSearch').value.trim().toLowerCase(), st = $('bataStatus').value, f = $('bataFrom').value, t = $('bataTo').value;
+    return bills.filter(b => (num(b.bata) || 0) > 0 &&
+      (!q || driverOf(b).toLowerCase().includes(q) || (b.party || '').toLowerCase().includes(q)) &&
+      (st === 'all' || (st === 'paid') === !!b.bataPaid) &&
+      (!f || b.billDate >= f) && (!t || b.billDate <= t)
+    ).sort((a, b) => (b.billDate || '').localeCompare(a.billDate || '') || (parseInt(b.billNo) || 0) - (parseInt(a.billNo) || 0));
+  }
+  function renderBata() {
+    const list = bataList();
+    const by = {};
+    list.forEach(b => {
+      const d = by[driverOf(b)] || (by[driverOf(b)] = { n: 0, total: 0, paid: 0 });
+      const v = num(b.bata) || 0; d.n++; d.total += v; if (b.bataPaid) d.paid += v;
+    });
+    $('bataCards').innerHTML = Object.keys(by).sort().map(k => {
+      const d = by[k], due = d.total - d.paid;
+      return '<div class="bata-card"><div class="who">' + esc(k) + '</div>' + d.n + ' bill(s) · total ' + money(d.total) +
+        '<br><span class="ok">Paid ' + money(d.paid) + '</span> · ' +
+        (due > 0 ? '<span class="due">To pay ' + money(due) + '</span>' : '<span class="ok">All paid</span>') + '</div>';
+    }).join('');
+    if (!list.length) {
+      $('bataRows').innerHTML = '<tr><td colspan="7" class="empty">No driver bata yet. Enter it in the "Driver Bata" line on a bill.</td></tr>';
+      $('bataFoot').innerHTML = ''; return;
+    }
+    let tot = 0, paid = 0;
+    $('bataRows').innerHTML = list.map(b => {
+      const v = num(b.bata) || 0; tot += v; if (b.bataPaid) paid += v;
+      return '<tr><td>' + fmtDate(b.billDate) + '</td><td>' + esc(b.billNo) + '</td><td>' + esc(b.party) + '</td><td>' + esc(driverOf(b)) + '</td>' +
+        '<td class="num">' + money(v) + '</td>' +
+        '<td><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-batapaid="' + b.id + '"' + (b.bataPaid ? ' checked' : '') + '>' +
+        (b.bataPaid ? '<span class="pill paid">Paid ' + fmtDate(b.bataPaidOn) + '</span>' : '<span class="pill due">Not paid</span>') + '</label></td>' +
+        '<td class="row-actions"><button data-open="' + b.id + '">Open</button></td></tr>';
+    }).join('');
+    $('bataFoot').innerHTML = '<tr><td colspan="4">' + list.length + ' bill(s) · paid ' + money(paid) + ' · to pay ' + money(tot - paid) +
+      '</td><td class="num">' + money(tot) + '</td><td colspan="2"></td></tr>';
+  }
+  $('bataRows').addEventListener('change', e => {
+    const id = e.target.dataset.batapaid; if (!id) return;
+    const b = bills.find(x => x.id === id); if (!b) return;
+    b.bataPaid = e.target.checked; b.bataPaidOn = b.bataPaid ? today() : null;
+    store(BILLS_KEY, bills); renderBata();
+    flash(b.bataPaid ? 'Bata for Bill No. ' + b.billNo + ' marked paid to ' + driverOf(b) + '.' : 'Bata for Bill No. ' + b.billNo + ' marked not paid.');
+  });
+  $('bataRows').addEventListener('click', e => { if (e.target.dataset.open) openBill(e.target.dataset.open); });
+  ['bataSearch', 'bataStatus', 'bataFrom', 'bataTo'].forEach(id => $(id).addEventListener('input', renderBata));
+  $('btnBataPayAll').addEventListener('click', async () => {
+    const list = bataList().filter(b => !b.bataPaid);
+    if (!list.length) { flash('Nothing to mark — all shown bata is already paid.'); return; }
+    const sum = list.reduce((a, b) => a + (num(b.bata) || 0), 0);
+    if (!(await ask('Mark ' + list.length + ' bill(s), ' + money(sum) + ' of bata, as paid to the driver?', 'Mark paid'))) return;
+    list.forEach(b => { b.bataPaid = true; b.bataPaidOn = today(); });
+    store(BILLS_KEY, bills); renderBata(); flash(money(sum) + ' of bata marked as paid.');
+  });
+  $('btnBataCsv').addEventListener('click', () => {
+    const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+    const rows = [['date', 'billNo', 'party', 'driver', 'bata', 'paid', 'paidOn'].join(',')].concat(
+      bataList().map(b => [b.billDate, b.billNo, b.party, driverOf(b), b.bata, b.bataPaid ? 'yes' : 'no', b.bataPaidOn || ''].map(q).join(',')));
+    downloadText('driver-bata-' + today() + '.csv', '\ufeff' + rows.join('\n'), 'text/csv'); flash(downloadedMsg('Bata CSV'));
+  });
+
   // ---------- Settings view ----------
   function loadSettingsForm() {
     $('setNextNo').value = settings.nextNo; $('setCurrency').value = settings.currency; $('setOperator').value = settings.operator;
     $('setAutoSign').checked = !!settings.autoSign; renderSavedSig();
+    $('setBata').value = settings.defaultBata || ''; $('setBataInAmount').checked = !!settings.bataInAmount;
   }
   $('btnSaveSettings').addEventListener('click', () => {
     const n = parseInt($('setNextNo').value, 10);
     if (!isNaN(n)) settings.nextNo = n;
     settings.currency = $('setCurrency').value; settings.operator = $('setOperator').value; settings.autoSign = $('setAutoSign').checked;
+    settings.defaultBata = $('setBata').value.trim(); settings.bataInAmount = $('setBataInAmount').checked;
     store(SETTINGS_KEY, settings); flash('Settings saved.');
     if (!currentId) newBill();
   });
@@ -1418,7 +1523,7 @@
   });
 
   // ---------- Navigation ----------
-  const VIEWS = ['billView', 'registerView', 'templatesView', 'reviewsView', 'settingsView'];
+  const VIEWS = ['billView', 'registerView', 'templatesView', 'reviewsView', 'bataView', 'settingsView'];
   function showView(v) {
     VIEWS.forEach(id => $(id).classList.toggle('hidden', id !== v));
     document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === v));
@@ -1427,6 +1532,7 @@
     if (v === 'templatesView') renderTemplates();
     if (v === 'reviewsView') renderReviews();
     if (v === 'settingsView') loadSettingsForm();
+    if (v === 'bataView') renderBata();
     window.scrollTo(0, 0);
   }
   document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => showView(t.dataset.view)));
