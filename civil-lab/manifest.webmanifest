@@ -1,0 +1,23 @@
+{
+  "name": "Civil Site Lab",
+  "short_name": "Site Lab",
+  "description": "On-site civil test report generator: sieve, compaction, FDD, cube, mix design, Marshall, cement, steel, brick and more.",
+  "id": "./",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#13263b",
+  "theme_color": "#13263b",
+  "categories": ["productivity", "utilities", "business"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Cube test", "url": "./index.html#cube", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Sand replacement (FDD)", "url": "./index.html#sandrep", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Document scanner", "url": "./index.html#scanner", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

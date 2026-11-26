@@ -2,6 +2,23 @@
 
 A single-page, offline web app for site quality-control labs. Open `index.html` in any browser (phone, tablet or PC). You don't need to install anything or create an account. Data stays on the device.
 
+## Install
+
+**Phone (Android or iPhone).** The app has to be opened from an `https://` web address once, then installed:
+1. Put this folder online. Free options: drag the folder onto https://app.netlify.com/drop, or enable GitHub Pages for the repository.
+2. Open that address on the phone.
+   - Android (Chrome): tap **Install** in the app's top bar, or ⋮ menu → **Install app**.
+   - iPhone (Safari): tap Share → **Add to Home Screen**.
+3. It now opens from its own icon, full screen, and works offline.
+
+To get a real Android `.apk` (for example, for sideloading), enter the same web address at https://www.pwabuilder.com and choose Android.
+
+**Windows / Mac / Linux computer.**
+- Windows: double-click `Start Civil Site Lab (Windows).bat`.
+- Mac / Linux: run `./start-mac-linux.sh`.
+
+The app opens in your browser at `http://localhost:8765`. Click **Install** (or the install icon in Chrome/Edge's address bar) to get a desktop app with its own window and Start-menu/Dock icon. You can also just open `index.html` directly; it works, but can't be installed that way.
+
 ## Tests (each in its own tab)
 
 | Group | Tests |

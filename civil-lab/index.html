@@ -4,6 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#13263b">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/favicon.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Site Lab">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Civil Site Lab</title>
 <script src="vendor/html2canvas.min.js"></script>
 <script src="vendor/jspdf.umd.min.js"></script>
@@ -19,7 +26,7 @@ if(!window.jspdf)document.write('<script src="https://cdnjs.cloudflare.com/ajax/
 html,body{margin:0}
 body{font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
 button{font:inherit;cursor:pointer}
-.top{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:8px;height:52px;padding:0 10px;background:var(--nav);color:#fff;box-shadow:0 1px 0 rgba(255,255,255,.06)}
+.top{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:8px;height:calc(52px + env(safe-area-inset-top,0px));padding:env(safe-area-inset-top,0px) max(10px,env(safe-area-inset-right,0px)) 0 max(10px,env(safe-area-inset-left,0px));background:var(--nav);color:#fff;box-shadow:0 1px 0 rgba(255,255,255,.06)}
 .ib{background:transparent;border:0;color:#fff;font-size:20px;width:36px;height:36px;border-radius:6px}
 .ib:hover{background:var(--navh)}
 .brand{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700;letter-spacing:.2px}
@@ -28,6 +35,10 @@ button{font:inherit;cursor:pointer}
 .acts button{background:var(--navh);color:#fff;border:1px solid rgba(255,255,255,.14);border-radius:6px;padding:6px 10px;font-size:13px;white-space:nowrap}
 .acts button:hover{background:var(--navon)}
 .acts button.pri{background:#1f7ae0;border-color:#1f7ae0}
+#bInstall{background:#1f9d55;border-color:#1f9d55}
+@media (display-mode:standalone){#bPrint{display:none}}
+html{-webkit-text-size-adjust:100%}
+body{overscroll-behavior-y:none}
 .layout{display:flex;min-height:calc(100vh - 52px)}
 nav{width:258px;flex:none;background:var(--nav);color:var(--navi);overflow:auto;position:sticky;top:52px;height:calc(100vh - 52px);padding-bottom:30px}
 nav .nsearch{padding:10px}
@@ -188,6 +199,7 @@ img.chimg{width:100%;display:block;margin-top:10px;border:1px solid #c5cdd5}
  <button class="ib" id="menuBtn" aria-label="Menu">☰</button>
  <div class="brand">Civil Site Lab <small>On-site Test Report Generator</small></div>
  <div class="acts">
+  <button id="bInstall" hidden title="Install as an app on this device">Install</button>
   <button id="bNew" title="Reset this test to blank">New</button>
   <button id="bSave" title="Save to records (Ctrl+S)">Save</button>
   <button id="bPdf" class="pri" title="Download PDF">PDF</button>
@@ -830,6 +842,15 @@ function saveRec(){const m=MOD[cur];if(m.custom){toast('Open a test tab to save 
 $('#bPdf').onclick=doPdf;$('#bShare').onclick=doShare;$('#bSave').onclick=saveRec;$('#bPrint').onclick=()=>window.print();
 $('#bNew').onclick=()=>{const m=MOD[cur];if(m.custom)return toast('Open a test tab first');if(!confirm('Clear this test and start a new blank report?\n(Saved records are not affected.)'))return;S.tests[cur]=fresh(m);save();render()};
 document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();saveRec()}if(e.key==='Escape')closeModal()});
+
+/* ---------- installable app (PWA) ---------- */
+let installEvt=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEvt=e;$('#bInstall').hidden=false});
+window.addEventListener('appinstalled',()=>{$('#bInstall').hidden=true;toast('Civil Site Lab installed')});
+$('#bInstall').onclick=async()=>{if(!installEvt)return;installEvt.prompt();await installEvt.userChoice;installEvt=null;$('#bInstall').hidden=true};
+if('serviceWorker'in navigator&&/^https?:$/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});
+const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent),standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone;
+if(isIOS&&!standalone&&/^https:$/.test(location.protocol)){let seen=0;try{seen=+localStorage.getItem('civlab_ios_tip')||0}catch(e){}if(!seen){setTimeout(()=>{toast('To install: tap Share ⎋ then “Add to Home Screen”');try{localStorage.setItem('civlab_ios_tip','1')}catch(e){}},1500)}}
 
 cur=(location.hash.slice(1)&&MOD[location.hash.slice(1)])?location.hash.slice(1):(MOD[S.cur]?S.cur:'sv_gsb');
 buildNav();go(cur);
