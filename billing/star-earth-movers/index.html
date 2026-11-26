@@ -16,6 +16,13 @@
   @font-face { font-family: 'SEM Architects Daughter'; src: url('fonts/architects-daughter.woff2') format('woff2'); font-display: block; }
   @font-face { font-family: 'SEM Homemade Apple'; src: url('fonts/homemade-apple.woff2') format('woff2'); font-display: block; }
   @font-face { font-family: 'SEM Satisfy'; src: url('fonts/satisfy.woff2') format('woff2'); font-display: block; }
+  /* 6 heading fonts (embedded) */
+  @font-face { font-family: 'SEM Oswald'; src: url('fonts/oswald.woff2') format('woff2'); font-weight: 100 900; font-display: block; }
+  @font-face { font-family: 'SEM Playfair Display'; src: url('fonts/playfair-display.woff2') format('woff2'); font-weight: 100 900; font-display: block; }
+  @font-face { font-family: 'SEM Roboto Slab'; src: url('fonts/roboto-slab.woff2') format('woff2'); font-weight: 100 900; font-display: block; }
+  @font-face { font-family: 'SEM Anton'; src: url('fonts/anton.woff2') format('woff2'); font-weight: 100 900; font-display: block; }
+  @font-face { font-family: 'SEM Bebas Neue'; src: url('fonts/bebas-neue.woff2') format('woff2'); font-weight: 100 900; font-display: block; }
+  @font-face { font-family: 'SEM Poppins'; src: url('fonts/poppins.woff2') format('woff2'); font-weight: 100 900; font-display: block; }
   :root {
     --bg: #2b2734;
     --panel: #ffffff;
@@ -80,28 +87,31 @@
   #slip.hw-on input.line:not(:focus) { color: transparent; }
   /* Heading: equal side columns so the title is truly centred on the page */
   .head {
-    display: grid; grid-template-columns: 180px minmax(0, 1fr) 180px;
+    display: grid; grid-template-columns: calc(180px * var(--k-side, 1)) minmax(0, 1fr) calc(180px * var(--k-side, 1));
     grid-template-areas: "logo brand owner";
     align-items: center; gap: 8px;
-    padding: 12px 14px; border-bottom: 2px solid var(--ink); min-height: 150px;
+    padding: calc(12px * var(--k-head, 1)) 14px; border-bottom: 2px solid var(--ink); min-height: calc(150px * var(--k-head, 1));
     color: var(--head-text);
   }
-  .logo { grid-area: logo; color: var(--head-text); width: 140px; justify-self: start; }
+  .logo { grid-area: logo; color: var(--head-text); width: calc(140px * var(--k-logo, 1)); justify-self: start; }
   .logo svg { width: 100%; height: auto; display: block; }
   .brand { grid-area: brand; text-align: center; font-family: var(--brand-font); font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
   .brand > div { display: block; }
-  .brand .t1 { font-size: 44px; letter-spacing: 1px; line-height: 1.1; }
-  .brand .t2 { font-size: 34px; letter-spacing: 1px; line-height: 1.15; }
-  .brand .sym { font-size: 16px; line-height: 1.2; }
+  .brand .t1 { font-size: calc(44px * var(--sz-t1, 1)); letter-spacing: 1px; line-height: 1.1; }
+  .brand .t2 { font-size: calc(34px * var(--sz-t2, 1)); letter-spacing: 1px; line-height: 1.15; }
+  .brand .t3 { font-size: calc(16px * var(--sz-t3, 1)); font-weight: 400; font-style: italic; line-height: 1.3; margin-top: 2px; }
+  .brand .sym { font-size: calc(16px * var(--sz-sym, 1)); line-height: 1.2; }
   .owner { grid-area: owner; text-align: right; font-weight: 700; font-size: 17px; line-height: 1.5; min-width: 0; }
-  .owner .name { font-size: 22px; }
+  .owner .name { font-size: calc(22px * var(--sz-name, 1)); }
+  .owner .p1 { font-size: calc(1em * var(--sz-p1, 1)); } .owner .p2 { font-size: calc(1em * var(--sz-p2, 1)); }
+  .owner .p3 { font-size: calc(0.85em * var(--sz-p3, 1)); font-weight: 400; }
 
   /* Logo position */
   .slip[data-logo-pos="right"] .head { grid-template-areas: "owner brand logo"; }
   .slip[data-logo-pos="right"] .logo { justify-self: end; }
   .slip[data-logo-pos="right"] .owner { text-align: left; }
   .slip[data-logo-pos="top"] .head { grid-template-columns: minmax(0, 1fr); grid-template-areas: "logo" "brand" "owner"; }
-  .slip[data-logo-pos="top"] .logo { justify-self: center; width: 120px; }
+  .slip[data-logo-pos="top"] .logo { justify-self: center; width: calc(120px * var(--k-logo, 1)); }
   .slip[data-logo-pos="top"] .owner { text-align: center; }
   .slip[data-logo-pos="none"] .logo { display: none; }
   .slip[data-logo-pos="none"] .head { grid-template-areas: ". brand owner"; }
@@ -114,40 +124,47 @@
   .slip[data-contact-align="center"] .owner { text-align: center; }
   .slip[data-contact-align="right"] .owner { text-align: right; }
   /* Title size */
-  .slip[data-title-size="s"] .brand .t1 { font-size: 36px; } .slip[data-title-size="s"] .brand .t2 { font-size: 27px; }
-  .slip[data-title-size="l"] .brand .t1 { font-size: 52px; } .slip[data-title-size="l"] .brand .t2 { font-size: 40px; }
+  .slip[data-title-size="s"] .brand .t1 { font-size: calc(36px * var(--sz-t1, 1)); } .slip[data-title-size="s"] .brand .t2 { font-size: calc(27px * var(--sz-t2, 1)); }
+  .slip[data-title-size="l"] .brand .t1 { font-size: calc(52px * var(--sz-t1, 1)); } .slip[data-title-size="l"] .brand .t2 { font-size: calc(40px * var(--sz-t2, 1)); }
+
+  /* parts the user switched off in the text editor */
+  .slip[data-hide~="sym"] .sym, .slip[data-hide~="t1"] .t1, .slip[data-hide~="t2"] .t2, .slip[data-hide~="t3"] .t3,
+  .slip[data-hide~="name"] .owner .name, .slip[data-hide~="p1"] .owner .p1, .slip[data-hide~="p2"] .owner .p2,
+  .slip[data-hide~="p3"] .owner .p3 { display: none; }
+  .slip { position: relative; }
 
   [contenteditable] { outline: none; border-radius: 3px; }
   [contenteditable]:hover { background: #ffffff55; }
   [contenteditable]:focus { background: #ffffff99; box-shadow: 0 0 0 1px var(--ink); color: var(--ink); }
 
-  .meta { padding: 12px 14px 10px; border-bottom: 2px solid var(--ink); }
-  .row { display: flex; align-items: baseline; gap: 8px; margin: 6px 0; }
-  .row label { font-size: 17px; white-space: nowrap; }
+  .meta { padding: calc(12px * var(--k-meta, 1)) 14px calc(10px * var(--k-meta, 1)); border-bottom: 2px solid var(--ink); }
+  .row { display: flex; align-items: baseline; gap: 8px; margin: calc(6px * var(--k-meta, 1)) 0; }
+  .row label { font-size: calc(17px * var(--sz-lbl, 1)); white-space: nowrap; }
   .between { justify-content: space-between; flex-wrap: wrap; }
 
   .line {
     flex: 1; min-width: 0; display: block;
-    font-family: var(--hand-font); font-size: calc(19px * var(--hand-scale, 1)); color: var(--hand);
+    font-family: var(--hand-font); font-size: calc(19px * var(--hand-scale, 1) * var(--sz-val, 1)); color: var(--hand);
     background: transparent; border: none; border-bottom: 2px dotted var(--ink);
     padding: 2px 4px; min-height: 31px; line-height: 1.4;
   }
   input.line:focus { outline: none; background: #ffffff77; }
-  .billno { max-width: 120px; border-bottom-style: none !important; font-size: 24px; }
+  .billno { max-width: 120px; border-bottom-style: none !important; font-size: calc(24px * var(--hand-scale, 1) * var(--sz-val, 1)); }
   .billdate { max-width: 200px; }
 
-  .body { padding: 30px 40px 20px; }
-  .field { display: grid; grid-template-columns: 170px 14px 1fr 34px; align-items: baseline; margin: 18px 0; }
-  .field label, .field .colon { font-size: 18px; }
+  .body { padding: calc(30px * var(--k-row, 1)) calc(40px * var(--k-margin, 1)) 20px; }
+  .field { display: grid; grid-template-columns: calc(170px * var(--k-label, 1)) 14px 1fr 34px; align-items: baseline; margin: calc(18px * var(--k-row, 1)) 0; }
+  .field label, .field .colon { font-size: calc(18px * var(--sz-lbl, 1)); }
   .field .auto { font-size: 12px; color: var(--ink); background: none; border: none; padding: 0 0 0 6px; cursor: pointer; visibility: hidden; }
   .field.manual .auto { visibility: visible; }
   .field.computed .line { border-bottom-style: dashed; }
 
-  .sign { display: flex; justify-content: space-between; align-items: flex-end; padding: 14px 40px 14px; font-size: 18px; }
+  .sign { display: flex; justify-content: space-between; align-items: flex-end; padding: calc(14px * var(--k-sign, 1)) calc(40px * var(--k-margin, 1)) 14px; font-size: 18px; }
+  .sign .slbl { font-size: calc(1em * var(--sz-lbl, 1)); }
   .sign > div { text-align: center; display: flex; flex-direction: column; align-items: center; }
   .sign .line { width: 180px; margin-bottom: 4px; text-align: center; }
-  .sig-area { height: 70px; width: 200px; display: flex; align-items: flex-end; justify-content: center; }
-  .sig-img { max-height: 70px; max-width: 200px; display: none; }
+  .sig-area { height: calc(70px * var(--k-sign, 1)); width: 200px; display: flex; align-items: flex-end; justify-content: center; }
+  .sig-img { max-height: calc(70px * var(--k-sign, 1)); max-width: 200px; display: none; }
   .sig-img[src] { display: block; }
   .sig-btn { font-size: 12px; padding: 3px 10px; margin: 2px 0 4px; background: #ffffffaa; border: 1px dashed var(--ink); color: var(--ink); }
 
@@ -186,8 +203,8 @@
   .slip.layout-banner .head { background: var(--ink); }
   .slip.layout-banner [contenteditable]:hover { background: #ffffff22; }
   /* Layout: boxed */
-  .slip.layout-boxed .body { padding: 24px 30px; }
-  .slip.layout-boxed .field { margin: 0; padding: 8px 10px; border: 1.5px solid var(--ink); border-top: none; align-items: center; }
+  .slip.layout-boxed .body { padding: 24px calc(30px * var(--k-margin, 1)); }
+  .slip.layout-boxed .field { margin: 0; padding: calc(8px * var(--k-row, 1)) 10px; border: 1.5px solid var(--ink); border-top: none; align-items: center; }
   .slip.layout-boxed .field:first-child { border-top: 1.5px solid var(--ink); }
   .slip.layout-boxed .field:nth-child(even) { background: #00000008; }
   .slip.layout-boxed .field .line { border-bottom: none; }
@@ -202,17 +219,104 @@
   .slip.layout-receipt { max-width: 440px; margin: 0 auto; }
   .slip.layout-receipt .frame { border: 2px dashed var(--ink); }
   .slip.layout-receipt[data-logo-pos] .head { grid-template-columns: minmax(0, 1fr); grid-template-areas: "logo" "brand" "owner"; border-bottom: 2px dashed var(--ink); }
-  .slip.layout-receipt[data-logo-pos] .logo { width: 110px; justify-self: center; }
+  .slip.layout-receipt[data-logo-pos] .logo { width: calc(110px * var(--k-logo, 1)); justify-self: center; }
   .slip.layout-receipt[data-logo-pos] .owner, .slip.layout-receipt[data-logo-pos] .brand { text-align: center; }
-  .slip.layout-receipt .brand .t1 { font-size: 34px; } .slip.layout-receipt .brand .t2 { font-size: 24px; }
+  .slip.layout-receipt .brand .t1 { font-size: calc(34px * var(--sz-t1, 1)); } .slip.layout-receipt .brand .t2 { font-size: calc(24px * var(--sz-t2, 1)); }
   .slip.layout-receipt .meta { border-bottom: 2px dashed var(--ink); }
-  .slip.layout-receipt .body { padding: 14px 16px; }
-  .slip.layout-receipt .field { grid-template-columns: 130px 12px 1fr 24px; margin: 10px 0; }
-  .slip.layout-receipt .field label, .slip.layout-receipt .row label { font-size: 15px; }
-  .slip.layout-receipt .sign { padding: 30px 12px 12px; font-size: 14px; }
+  .slip.layout-receipt .body { padding: 14px calc(16px * var(--k-margin, 1)); }
+  .slip.layout-receipt .field { grid-template-columns: calc(130px * var(--k-label, 1)) 12px 1fr 24px; margin: calc(10px * var(--k-row, 1)) 0; }
+  .slip.layout-receipt .field label, .slip.layout-receipt .row label { font-size: calc(15px * var(--sz-lbl, 1)); }
+  .slip.layout-receipt .sign { padding: calc(30px * var(--k-sign, 1)) 12px 12px; font-size: 14px; }
   .slip.layout-receipt .sign .line { width: 140px; }
-  .slip.layout-receipt .sig-area { width: 150px; height: 60px; }
+  .slip.layout-receipt .sig-area { width: 150px; height: calc(60px * var(--k-sign, 1)); }
   .slip.layout-receipt .sig-img { max-width: 150px; max-height: 60px; }
+
+
+  /* ===== 10 more layouts ===== */
+  .decos { position: absolute; inset: 0; pointer-events: none; }
+  .decos > * { position: absolute; display: none; }
+  /* Ledger: account-book rules + red margin line */
+  .slip.layout-ledger .frame { border: 1px solid var(--ink); }
+  .slip.layout-ledger .brand { text-align: left; }
+  .slip.layout-ledger .head { border-bottom: 3px double var(--ink); }
+  .slip.layout-ledger .meta .row { border-bottom: 1px solid #a9c8e8; padding-bottom: 4px; }
+  .slip.layout-ledger .line { border-bottom: none; }
+  .slip.layout-ledger .body { border-left: 4px double #d62828; margin-left: 46px; padding-left: 18px; }
+  .slip.layout-ledger .field { margin: 0; padding: calc(9px * var(--k-row, 1)) 0; border-bottom: 1px solid #a9c8e8; }
+  .slip.layout-ledger .sign { border-top: 3px double var(--ink); }
+  /* Modern invoice: colour bar on the left, fields in two columns */
+  .slip.layout-invoice .frame { border: none; border-left: 14px solid var(--ink); }
+  .slip.layout-invoice .head { border-bottom: 4px solid var(--ink); }
+  .slip.layout-invoice .brand { text-align: left; }
+  .slip.layout-invoice .meta { border-bottom: 1px solid #0002; }
+  .slip.layout-invoice .body { display: grid; grid-template-columns: 1fr 1fr; column-gap: 26px; }
+  .slip.layout-invoice .field { grid-template-columns: calc(118px * var(--k-label, 1)) 10px 1fr 22px; margin: calc(12px * var(--k-row, 1)) 0; }
+  .slip.layout-invoice .field label, .slip.layout-invoice .row label { text-transform: uppercase; letter-spacing: 1px; font-size: calc(13px * var(--sz-lbl, 1)); font-weight: 700; }
+  .slip.layout-invoice .line { border-bottom: 1px solid #0003; }
+  .slip.layout-invoice .field[data-f="balance"] { grid-column: 1 / -1; background: var(--ink); color: #fff; padding: 6px 10px; border-radius: 6px; --hand: #ffffff; }
+  .slip.layout-invoice .field[data-f="balance"] .line { border-bottom: none; }
+  /* Certificate: double gold border with corner ornaments */
+  .slip.layout-certificate { padding: 30px; }
+  .slip.layout-certificate .frame { border: 6px double var(--ink); padding: 6px; }
+  .slip.layout-certificate .head { border-bottom: 1px solid var(--ink); }
+  .slip.layout-certificate .brand .t2 { font-size: calc(28px * var(--sz-t2, 1)); letter-spacing: 0; }
+  .slip.layout-certificate .meta { border-bottom: 1px solid var(--ink); }
+  .slip.layout-certificate .decos .corner { display: block; width: 62px; height: 62px; color: var(--ink); }
+  .slip.layout-certificate .decos .c-tl { left: 6px; top: 6px; } .slip.layout-certificate .decos .c-tr { right: 6px; top: 6px; }
+  .slip.layout-certificate .decos .c-bl { left: 6px; bottom: 6px; } .slip.layout-certificate .decos .c-br { right: 6px; bottom: 6px; }
+  /* Site hazard: yellow/black stripes, yellow header */
+  .slip.layout-hazard { padding: 30px 18px; }
+  .slip.layout-hazard .decos .hz { display: block; left: 0; right: 0; height: 18px; }
+  .slip.layout-hazard .decos .hz-top { top: 0; } .slip.layout-hazard .decos .hz-bot { bottom: 0; }
+  .slip.layout-hazard .frame { border: 3px solid #111; }
+  .slip.layout-hazard .head { background: #ffd23f; border-bottom: 3px solid #111; }
+  .slip.layout-hazard .brand { text-transform: uppercase; }
+  .slip.layout-hazard .field label { font-weight: 700; }
+  /* Blueprint: grid paper, white ink */
+  .slip.layout-blueprint .decos .grid { display: block; inset: 0; }
+  .slip.layout-blueprint .frame { border: 2px solid #ffffffcc; }
+  .slip.layout-blueprint .head, .slip.layout-blueprint .meta { border-bottom: 2px solid #ffffffcc; }
+  .slip.layout-blueprint .line { border-bottom-color: #ffffffaa; }
+  .slip.layout-blueprint .sig-btn { background: #ffffff22; color: #fff; border-color: #fff; }
+  /* Rounded cards: each section on its own white card */
+  .slip.layout-rounded .frame { border: none; }
+  .slip.layout-rounded .head, .slip.layout-rounded .meta, .slip.layout-rounded .body, .slip.layout-rounded .sign {
+    background: #ffffff; border: 1px solid #d5dbe5; border-radius: 16px; margin-bottom: 10px; }
+  .slip.layout-rounded .line { border-bottom: 1.5px solid #cbd5e1; }
+  .slip.layout-rounded .field.computed .line { border-bottom-style: solid; border-bottom-color: var(--ink); }
+  /* Two-tone: coloured label column */
+  .slip.layout-split .frame { border: 2px solid var(--ink); }
+  .slip.layout-split .head { background: #f3e8ff; }
+  .slip.layout-split .body { padding: 0; }
+  .slip.layout-split .field { margin: 0; align-items: stretch; grid-template-columns: calc(190px * var(--k-label, 1)) 0 1fr 34px; border-bottom: 1px solid #e9d5ff; }
+  .slip.layout-split .field label { background: var(--ink); color: #fff; padding: calc(11px * var(--k-row, 1)) 14px; }
+  .slip.layout-split .field .colon { display: none; }
+  .slip.layout-split .field .line { border-bottom: none; align-self: center; padding-left: 14px; }
+  .slip.layout-split .field .auto { align-self: center; }
+  /* Kraft paper: stitched border, stencil heading */
+  .slip.layout-kraft .frame { border: 2px dashed var(--ink); outline: none; }
+  .slip.layout-kraft .head { border-bottom: 2px dashed var(--ink); }
+  .slip.layout-kraft .meta { border-bottom: 2px dashed var(--ink); }
+  .slip.layout-kraft .brand .t1, .slip.layout-kraft .brand .t2 { letter-spacing: 4px; }
+  .slip.layout-kraft .brand .t1 { border: 3px solid var(--ink); display: inline-block; padding: 0 14px; }
+  /* Bold totals: amount and balance in highlighted boxes */
+  .slip.layout-totals .head { border-bottom: 3px solid var(--ink); }
+  .slip.layout-totals .field[data-f="amount"], .slip.layout-totals .field[data-f="balance"] {
+    border: 2px solid var(--ink); border-radius: 8px; padding: 6px 10px; margin: calc(12px * var(--k-row, 1)) -10px; }
+  .slip.layout-totals .field[data-f="balance"] { background: var(--ink); color: #fff; --hand: #ffffff; }
+  .slip.layout-totals .field[data-f="amount"] .line, .slip.layout-totals .field[data-f="balance"] .line {
+    border-bottom: none; font-size: calc(26px * var(--hand-scale, 1) * var(--sz-val, 1)); }
+  .slip.layout-totals .field[data-f="amount"] label, .slip.layout-totals .field[data-f="balance"] label { font-weight: 700; font-size: calc(21px * var(--sz-lbl, 1)); }
+  /* Heritage: maroon double border, gold motifs, large symbol */
+  .slip.layout-heritage { padding: 26px; }
+  .slip.layout-heritage .frame { border: 5px double var(--ink); }
+  .slip.layout-heritage .head { border-bottom: 2px solid #c9a227; }
+  .slip.layout-heritage .meta { border-bottom: 2px solid #c9a227; }
+  .slip.layout-heritage .brand .sym { font-size: calc(30px * var(--sz-sym, 1)); color: #c9a227; }
+  .slip.layout-heritage .line { border-bottom-color: #c9a227; }
+  .slip.layout-heritage .decos .motif { display: block; width: 46px; height: 46px; color: #c9a227; }
+  .slip.layout-heritage .decos .m-tl { left: 2px; top: 2px; } .slip.layout-heritage .decos .m-tr { right: 2px; top: 2px; }
+  .slip.layout-heritage .decos .m-bl { left: 2px; bottom: 2px; } .slip.layout-heritage .decos .m-br { right: 2px; bottom: 2px; }
 
   .hint { color: #ddd; font-size: 12px; margin-top: 10px; line-height: 1.5; }
 
@@ -287,27 +391,37 @@
   .font-opt .fname { font-size: 11px; color: #666; font-family: Arial, sans-serif; }
   .font-opt.active { border-color: #7b5cff; box-shadow: 0 0 0 3px #7b5cff33; }
   .logo-opt.active { border-color: #7b5cff; box-shadow: 0 0 0 3px #7b5cff33; }
+  .tiny-note { font-size: 13px; color: #666; margin: 8px 0 0; }
+  .sub-h { font-size: 15px; color: var(--accent); margin: 18px 0 4px; border-top: 1px solid #eee; padding-top: 12px; }
+  .ctl select { padding: 7px; border: 1px solid #ccc; border-radius: 6px; font: inherit; min-width: 200px; max-width: 100%; }
+  .ctl input[type=range] { flex: 1; min-width: 140px; accent-color: #7b5cff; }
+  .ctl .rv { min-width: 52px; font-size: 14px; color: var(--accent); }
+  .ctl .chk { display: flex; gap: 8px; align-items: center; font-size: 14px; }
+  .ctl input[type=color] { width: 48px; height: 34px; padding: 2px; border: 1px solid #ccc; border-radius: 6px; background: #fff; }
 
   /* Phone layout for the bill on screen only (.wrap). Saved files and prints are drawn
      off-screen in #exportStage, so they always use the full-size bill layout. */
   @media (max-width: 640px) {
-    .wrap .head { grid-template-columns: 90px minmax(0, 1fr); grid-template-areas: "logo brand" "owner owner"; }
-    .wrap .logo { width: 86px; }
+    .wrap .head { grid-template-columns: calc(90px * var(--k-logo, 1)) minmax(0, 1fr); grid-template-areas: "logo brand" "owner owner"; }
+    .wrap .logo { width: calc(86px * var(--k-logo, 1)); }
     .wrap .slip:not(.layout-receipt)[data-logo-pos="right"] .head { grid-template-areas: "brand logo" "owner owner"; }
     .wrap .slip:not(.layout-receipt)[data-logo-pos="none"] .head { grid-template-areas: "brand brand" "owner owner"; }
     .wrap .owner { font-size: 15px; }
     .wrap .slip[data-contact-align="auto"] .owner { text-align: center; }
-    .wrap .owner .name { font-size: 18px; }
-    .wrap .brand .t1, .wrap .slip[data-title-size] .brand .t1 { font-size: 32px; } .wrap .brand .t2, .wrap .slip[data-title-size] .brand .t2 { font-size: 22px; }
+    .wrap .owner .name { font-size: calc(18px * var(--sz-name, 1)); }
+    .wrap .brand .t1, .wrap .slip[data-title-size] .brand .t1 { font-size: calc(32px * var(--sz-t1, 1)); } .wrap .brand .t2, .wrap .slip[data-title-size] .brand .t2 { font-size: calc(22px * var(--sz-t2, 1)); }
     .ctl > span { width: 100%; }
-    .wrap .body { padding: 16px 10px; }
-    .wrap .field { grid-template-columns: 120px 10px 1fr 28px; }
-    .wrap .field label, .wrap .row label, .wrap .field .colon { font-size: 15px; }
-    .wrap .sign { padding: 30px 10px 10px; font-size: 14px; }
+    .wrap .body { padding: calc(16px * var(--k-row, 1)) calc(10px * var(--k-margin, 1)); }
+    .wrap .field { grid-template-columns: calc(120px * var(--k-label, 1)) 10px 1fr 28px; }
+    .wrap .field label, .wrap .row label, .wrap .field .colon { font-size: calc(15px * var(--sz-lbl, 1)); }
+    .wrap .sign { padding: calc(30px * var(--k-sign, 1)) calc(10px * var(--k-margin, 1)) 10px; font-size: 14px; }
     .wrap .sign .line { width: 130px; }
-    .wrap .sig-area { width: 140px; height: 56px; } .wrap .sig-img { max-width: 140px; max-height: 56px; }
-    .wrap .line { font-size: calc(17px * var(--hand-scale, 1)); }
-    .wrap .slip.layout-boxed .body { padding: 14px 8px; }
+    .wrap .sig-area { width: 140px; height: calc(56px * var(--k-sign, 1)); } .wrap .sig-img { max-width: 140px; max-height: 56px; }
+    .wrap .line { font-size: calc(17px * var(--hand-scale, 1) * var(--sz-val, 1)); }
+    .wrap .slip.layout-invoice .body { grid-template-columns: 1fr; }
+    .wrap .slip.layout-ledger .body { margin-left: 14px; padding-left: 10px; }
+    .wrap .slip.layout-split .field { grid-template-columns: calc(120px * var(--k-label, 1)) 0 1fr 28px; }
+    .wrap .slip.layout-boxed .body { padding: 14px calc(8px * var(--k-margin, 1)); }
   }
   /* the export stage and thumbnails always use the full-size layout */
   #exportStage .slip, .tpl-card .slip { --x: 0; }
@@ -359,7 +473,7 @@
 
   <!-- ================= BILL ENTRY ================= -->
   <section id="billView">
-    <div class="slip" id="slip" data-logo-pos="left" data-title-align="center" data-contact-align="auto" data-title-size="m">
+    <div class="slip" id="slip" data-hide="t3 p3" data-logo-pos="left" data-title-align="center" data-contact-align="auto" data-title-size="m">
       <div class="frame">
         <div class="head">
           <div class="logo" aria-hidden="true"></div>
@@ -367,11 +481,13 @@
             <div class="sym" contenteditable="true" data-setting="symbol">உ</div>
             <div class="t1" contenteditable="true" data-setting="title1">STAR</div>
             <div class="t2" contenteditable="true" data-setting="title2">EARTH MOVERS</div>
+            <div class="t3" contenteditable="true" data-setting="title3">JCB &amp; Earth Moving Works</div>
           </div>
           <div class="owner">
             <div class="name" contenteditable="true" data-setting="owner">G. Sridharan</div>
-            <div contenteditable="true" data-setting="phone1">Cell : 70253 75005</div>
-            <div contenteditable="true" data-setting="phone2">99761 99016</div>
+            <div class="p1" contenteditable="true" data-setting="phone1">Cell : 70253 75005</div>
+            <div class="p2" contenteditable="true" data-setting="phone2">99761 99016</div>
+            <div class="p3" contenteditable="true" data-setting="phone3">Address / GST No.</div>
           </div>
         </div>
 
@@ -385,15 +501,15 @@
         </div>
 
         <div class="body">
-          <div class="field"><label for="startMeter" contenteditable="true" data-setting="lblStart">Starting Meeter</label><span class="colon">:</span><input class="line" id="startMeter" inputmode="decimal"><span></span></div>
-          <div class="field"><label for="closeMeter" contenteditable="true" data-setting="lblClose">Closing Meeter</label><span class="colon">:</span><input class="line" id="closeMeter" inputmode="decimal"><span></span></div>
-          <div class="field computed"><label for="running" contenteditable="true" data-setting="lblRunning">Running</label><span class="colon">:</span><input class="line" id="running" inputmode="decimal"><button class="auto" title="Back to automatic">↺</button></div>
-          <div class="field computed"><label for="total" contenteditable="true" data-setting="lblTotal">Total</label><span class="colon">:</span><input class="line" id="total" inputmode="decimal"><button class="auto" title="Back to automatic">↺</button></div>
-          <div class="field"><label for="rate" contenteditable="true" data-setting="lblRate">R / H</label><span class="colon">:</span><input class="line" id="rate" inputmode="decimal"><span></span></div>
-          <div class="field"><label for="bata" contenteditable="true" data-setting="lblBata">Driver Bata</label><span class="colon">:</span><input class="line" id="bata" inputmode="decimal"><span></span></div>
-          <div class="field computed"><label for="amount" contenteditable="true" data-setting="lblAmount">Amount</label><span class="colon">:</span><input class="line" id="amount" inputmode="decimal"><button class="auto" title="Back to automatic">↺</button></div>
-          <div class="field"><label for="advance" contenteditable="true" data-setting="lblAdvance">Advance</label><span class="colon">:</span><input class="line" id="advance" inputmode="decimal"><span></span></div>
-          <div class="field computed"><label for="balance" contenteditable="true" data-setting="lblBalance">Balance</label><span class="colon">:</span><input class="line" id="balance" inputmode="decimal"><button class="auto" title="Back to automatic">↺</button></div>
+          <div class="field" data-f="startMeter"><label for="startMeter" contenteditable="true" data-setting="lblStart">Starting Meeter</label><span class="colon">:</span><input class="line" id="startMeter" inputmode="decimal"><span></span></div>
+          <div class="field" data-f="closeMeter"><label for="closeMeter" contenteditable="true" data-setting="lblClose">Closing Meeter</label><span class="colon">:</span><input class="line" id="closeMeter" inputmode="decimal"><span></span></div>
+          <div class="field computed" data-f="running"><label for="running" contenteditable="true" data-setting="lblRunning">Running</label><span class="colon">:</span><input class="line" id="running" inputmode="decimal"><button class="auto" title="Back to automatic">↺</button></div>
+          <div class="field computed" data-f="total"><label for="total" contenteditable="true" data-setting="lblTotal">Total</label><span class="colon">:</span><input class="line" id="total" inputmode="decimal"><button class="auto" title="Back to automatic">↺</button></div>
+          <div class="field" data-f="rate"><label for="rate" contenteditable="true" data-setting="lblRate">R / H</label><span class="colon">:</span><input class="line" id="rate" inputmode="decimal"><span></span></div>
+          <div class="field" data-f="bata"><label for="bata" contenteditable="true" data-setting="lblBata">Driver Bata</label><span class="colon">:</span><input class="line" id="bata" inputmode="decimal"><span></span></div>
+          <div class="field computed" data-f="amount"><label for="amount" contenteditable="true" data-setting="lblAmount">Amount</label><span class="colon">:</span><input class="line" id="amount" inputmode="decimal"><button class="auto" title="Back to automatic">↺</button></div>
+          <div class="field" data-f="advance"><label for="advance" contenteditable="true" data-setting="lblAdvance">Advance</label><span class="colon">:</span><input class="line" id="advance" inputmode="decimal"><span></span></div>
+          <div class="field computed" data-f="balance"><label for="balance" contenteditable="true" data-setting="lblBalance">Balance</label><span class="colon">:</span><input class="line" id="balance" inputmode="decimal"><button class="auto" title="Back to automatic">↺</button></div>
         </div>
 
         <div class="sign">
@@ -401,13 +517,13 @@
             <div class="sig-area"><img class="sig-img" alt=""></div>
             <button type="button" class="sig-btn" data-sign="operator">✍ Sign</button>
             <input class="line" id="operator" placeholder="">
-            <span contenteditable="true" data-setting="lblOperator">Operator Signature</span>
+            <span class="slbl" contenteditable="true" data-setting="lblOperator">Operator Signature</span>
           </div>
           <div class="sig" data-who="party">
             <div class="sig-area"><img class="sig-img" alt=""></div>
             <button type="button" class="sig-btn" data-sign="party">✍ Sign</button>
             <input class="line" id="partySign">
-            <span contenteditable="true" data-setting="lblParty">Party Signature</span>
+            <span class="slbl" contenteditable="true" data-setting="lblParty">Party Signature</span>
           </div>
         </div>
       </div>
@@ -420,6 +536,23 @@
       Type over any calculated value to change it; press ↺ to go back to the automatic figure.
       Template: <b id="tplName"></b> (change it in Templates).
     </div>
+
+    <details class="panel no-print" id="textPanel">
+      <summary>Edit text, size &amp; spacing</summary>
+      <p class="tiny-note">Pick a part of the bill (or tap it on the bill), then change it. Changes are saved and used in PDF, JPEG and print.</p>
+      <div class="ctl"><span>Part of the bill</span><select id="stKey"></select></div>
+      <div class="ctl" id="stShowRow"><span>Show</span><label class="chk"><input type="checkbox" id="stShow"> Show this line on the bill</label></div>
+      <div class="ctl"><span>Font</span><select id="stFont"></select></div>
+      <div class="ctl"><span>Size</span><input type="range" id="stSize" min="40" max="220" step="5"><b class="rv" id="stSizeVal"></b></div>
+      <div class="ctl"><span>Weight</span><select id="stWeight"><option value="">Template</option><option value="400">Normal</option><option value="700">Bold</option></select></div>
+      <div class="ctl"><span>Style</span><select id="stItalic"><option value="">Template</option><option value="normal">Upright</option><option value="italic">Italic</option></select></div>
+      <div class="ctl"><span>Letter spacing</span><input type="range" id="stLs" min="-2" max="14" step="0.5"><b class="rv" id="stLsVal"></b></div>
+      <div class="ctl"><span>Colour</span><input type="color" id="stColor"><button type="button" id="stColorReset">Template colour</button></div>
+      <div class="ctl"><button type="button" id="stReset">Reset this part</button><button type="button" id="stResetAll">Reset all text styles</button></div>
+      <h3 class="sub-h">Space</h3>
+      <div id="spaceCtl"></div>
+      <div class="ctl"><button type="button" id="spReset">Reset spacing</button></div>
+    </details>
 
     <details class="panel no-print" id="headingPanel">
       <summary>Heading, handwriting &amp; logo</summary>
@@ -693,6 +826,7 @@
   const IMPACT = 'Impact, "Arial Black", "Helvetica Neue", sans-serif';
   const MONO = '"Courier New", Courier, monospace';
   const HAND = '"Segoe Print", "Comic Sans MS", "Bradley Hand", cursive';
+  const F = (name, fallback) => '"SEM ' + name + '", ' + fallback; // embedded font with fallback
   const TEMPLATES = [
     { id: 'pink',     name: 'Classic Pink',      sub: 'Same as the paper book', layout: 'classic', paper: '#f9c6d3', ink: '#3b2a6b', hand: '#1f2a55', brand: SERIF },
     { id: 'yellow',   name: 'Carbon Yellow',     sub: 'Duplicate copy look',    layout: 'classic', paper: '#fbeea0', ink: '#2c3e8f', hand: '#1b2a6b', brand: SERIF },
@@ -708,7 +842,17 @@
     { id: 'teal',     name: 'Teal Boxed',        sub: 'Table-style rows',       layout: 'boxed',   paper: '#e6f6f5', ink: '#0f5e5a', hand: '#083c39', brand: SANS },
     { id: 'mono',     name: 'Minimal Black',     sub: 'Clean, no frame',        layout: 'minimal', paper: '#ffffff', ink: '#111111', hand: '#111111', brand: SANS, handFont: SANS },
     { id: 'indigo',   name: 'Minimal Indigo',    sub: 'Clean, no frame',        layout: 'minimal', paper: '#f7f7ff', ink: '#3730a3', hand: '#1e1b4b', brand: SANS, handFont: SANS },
-    { id: 'receipt',  name: 'Thermal Receipt',   sub: 'Narrow, typewriter',     layout: 'receipt', paper: '#ffffff', ink: '#222222', hand: '#000000', brand: MONO, body: MONO, handFont: MONO }
+    { id: 'receipt',  name: 'Thermal Receipt',   sub: 'Narrow, typewriter',     layout: 'receipt', paper: '#ffffff', ink: '#222222', hand: '#000000', brand: MONO, body: MONO, handFont: MONO },
+    { id: 'ledger',   name: 'Account Ledger',    sub: 'Ruled book, red margin',  layout: 'ledger', paper: '#fffdf2', ink: '#1d3557', hand: '#0b2a4a', brand: F('Roboto Slab', SERIF) },
+    { id: 'invoice',  name: 'Modern Invoice',    sub: 'Side bar, two columns',   layout: 'invoice', paper: '#ffffff', ink: '#0f766e', hand: '#0b3b37', brand: F('Poppins', SANS), body: F('Poppins', SANS) },
+    { id: 'certificate', name: 'Gold Certificate', sub: 'Double border, corners', layout: 'certificate', paper: '#fffaf0', ink: '#7a5c00', hand: '#3d2c00', brand: F('Playfair Display', SERIF) },
+    { id: 'hazard',   name: 'Site Hazard',       sub: 'Yellow & black stripes',  layout: 'hazard', paper: '#ffffff', ink: '#111111', hand: '#111111', brand: F('Anton', IMPACT) },
+    { id: 'blueprint', name: 'Blueprint',        sub: 'Grid paper, white ink',   layout: 'blueprint', paper: '#1b4f8f', ink: '#ffffff', hand: '#fff6b0', brand: F('Bebas Neue', IMPACT) },
+    { id: 'rounded',  name: 'Rounded Cards',     sub: 'Each part on a card',     layout: 'rounded', paper: '#e9edf3', ink: '#334155', hand: '#1e293b', brand: F('Poppins', SANS), body: F('Poppins', SANS) },
+    { id: 'split',    name: 'Two-Tone Columns',  sub: 'Coloured label column',   layout: 'split', paper: '#ffffff', ink: '#6d28d9', hand: '#2e1065', brand: F('Oswald', SANS) },
+    { id: 'kraft',    name: 'Kraft Paper',       sub: 'Brown paper, stitched',   layout: 'kraft', paper: '#d8b98a', ink: '#3b2a1a', hand: '#1b120a', brand: F('Bebas Neue', IMPACT) },
+    { id: 'totals',   name: 'Bold Totals',       sub: 'Amount & balance boxed',  layout: 'totals', paper: '#f7fbf8', ink: '#14532d', hand: '#0f2e1c', brand: F('Oswald', SANS) },
+    { id: 'heritage', name: 'Heritage',          sub: 'Maroon & gold, motifs',   layout: 'heritage', paper: '#fff8e7', ink: '#8b1e1e', hand: '#4a0d0d', brand: F('Playfair Display', SERIF) }
   ];
   const tplById = (id) => TEMPLATES.find(t => t.id === id) || TEMPLATES[0];
 
@@ -851,6 +995,172 @@
     flash('Handwriting: ' + (f ? f.name : 'template default') + '.');
   });
 
+  // ---------- Decorations used by some templates (drawn as SVG, so files match the screen) ----------
+  (function addDecos() {
+    const mirror = (d, fx, fy, size) => d.replace(/(-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)/g, (m, x, y) =>
+      (fx ? size - x : +x) + ' ' + (fy ? size - y : +y));
+    const corner = 'M 4 46 L 4 4 L 46 4 M 11 36 L 11 11 L 36 11 M 4 4 L 18 18 M 20 4 L 20 9 M 4 20 L 9 20';
+    const motif = 'M 6 6 L 6 6 M 23 4 Q 16 16 4 23 M 4 23 Q 20 20 23 4 M 30 6 Q 26 26 6 30 M 13 13 L 13 13';
+    const svgCorner = (cls, fx, fy) => '<svg class="corner ' + cls + '" viewBox="0 0 62 62" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">' +
+      '<path d="' + mirror(corner, fx, fy, 62) + '"/><circle cx="' + (fx ? 58 : 4) + '" cy="' + (fy ? 58 : 4) + '" r="3" fill="currentColor"/></svg>';
+    const svgMotif = (cls, fx, fy) => '<svg class="motif ' + cls + '" viewBox="0 0 46 46" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">' +
+      '<path d="' + mirror(motif, fx, fy, 46) + '"/>' +
+      [[6, 6], [13, 13], [20, 6], [6, 20], [30, 14], [14, 30]].map(([x, y]) => '<circle cx="' + (fx ? 46 - x : x) + '" cy="' + (fy ? 46 - y : y) + '" r="2.2" fill="currentColor" stroke="none"/>').join('') + '</svg>';
+    const hz = (cls) => '<svg class="hz ' + cls + '" width="100%" height="100%" style="width:100%"><defs><pattern id="semHz" width="28" height="28" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">' +
+      '<rect width="14" height="28" fill="#111"/><rect x="14" width="14" height="28" fill="#ffd23f"/></pattern></defs><rect width="100%" height="100%" fill="url(#semHz)"/></svg>';
+    const grid = '<svg class="grid" width="100%" height="100%" style="width:100%;height:100%;left:0;top:0"><defs>' +
+      '<pattern id="semGridS" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="#ffffff" stroke-opacity="0.14" stroke-width="1"/></pattern>' +
+      '<pattern id="semGridL" width="100" height="100" patternUnits="userSpaceOnUse"><rect width="100" height="100" fill="url(#semGridS)"/><path d="M 100 0 L 0 0 0 100" fill="none" stroke="#ffffff" stroke-opacity="0.3" stroke-width="1.5"/></pattern>' +
+      '</defs><rect width="100%" height="100%" fill="url(#semGridL)"/></svg>';
+    const d = document.createElement('div');
+    d.className = 'decos'; d.setAttribute('aria-hidden', 'true');
+    d.innerHTML = hz('hz-top') + hz('hz-bot') + grid +
+      svgCorner('c-tl', 0, 0) + svgCorner('c-tr', 1, 0) + svgCorner('c-bl', 0, 1) + svgCorner('c-br', 1, 1) +
+      svgMotif('m-tl', 0, 0) + svgMotif('m-tr', 1, 0) + svgMotif('m-bl', 0, 1) + svgMotif('m-br', 1, 1);
+    $('slip').insertBefore(d, $('slip').firstChild);
+  })();
+
+  // ---------- Text editor: font, size, weight, style, spacing, colour, show/hide per part ----------
+  const TEXT_PARTS = [
+    { k: 't1', name: 'Title line 1 (STAR)', sel: '.slip .brand .t1', hide: true },
+    { k: 't2', name: 'Title line 2 (EARTH MOVERS)', sel: '.slip .brand .t2', hide: true },
+    { k: 't3', name: 'Tagline under the title', sel: '.slip .brand .t3', hide: true },
+    { k: 'sym', name: 'Symbol above the title (உ)', sel: '.slip .brand .sym', hide: true },
+    { k: 'name', name: 'Owner name', sel: '.slip .owner .name', hide: true },
+    { k: 'p1', name: 'Phone line 1', sel: '.slip .owner .p1', hide: true },
+    { k: 'p2', name: 'Phone line 2', sel: '.slip .owner .p2', hide: true },
+    { k: 'p3', name: 'Extra line (address / GST No.)', sel: '.slip .owner .p3', hide: true },
+    { k: 'lbl', name: 'Labels (No., M/s., Starting Meeter…)', sel: '.slip .field label, .slip .row label, .slip .field .colon, .slip .sign .slbl', hide: false },
+    { k: 'val', name: 'Filled-in values (handwriting)', sel: '.slip .line, .slip .hw-line', hide: false }
+  ];
+  const TEXT_FONTS = [
+    { id: '', name: 'Template font' },
+    { id: 'serif', name: 'Classic serif (Times)', fam: SERIF },
+    { id: 'sans', name: 'Plain sans (Arial)', fam: SANS },
+    { id: 'mono', name: 'Typewriter (Courier)', fam: MONO },
+    { id: 'impact', name: 'Heavy condensed (Impact)', fam: IMPACT },
+    { id: 'oswald', name: 'Oswald (tall bold)', fam: F('Oswald', SANS) },
+    { id: 'playfair', name: 'Playfair Display (elegant)', fam: F('Playfair Display', SERIF) },
+    { id: 'robotoslab', name: 'Roboto Slab (strong serif)', fam: F('Roboto Slab', SERIF) },
+    { id: 'anton', name: 'Anton (poster)', fam: F('Anton', IMPACT) },
+    { id: 'bebas', name: 'Bebas Neue (stencil caps)', fam: F('Bebas Neue', IMPACT) },
+    { id: 'poppins', name: 'Poppins (modern)', fam: F('Poppins', SANS) }
+  ].concat(HAND_FONTS.map(f => ({ id: 'hand-' + f.id, name: 'Handwriting: ' + f.name, fam: handFamily(f) })));
+  const SPACE = [
+    { k: 'head', name: 'Heading height', min: 60, max: 220 },
+    { k: 'logo', name: 'Logo size', min: 40, max: 170 },
+    { k: 'side', name: 'Logo / phone column width', min: 50, max: 160 },
+    { k: 'meta', name: 'No. / Date / M/s. spacing', min: 30, max: 260 },
+    { k: 'row', name: 'Gap between lines', min: 30, max: 260 },
+    { k: 'label', name: 'Label column width', min: 60, max: 170 },
+    { k: 'margin', name: 'Left / right margin', min: 0, max: 260 },
+    { k: 'sign', name: 'Signature space', min: 30, max: 260 }
+  ];
+  if (!settings.tstyle) settings.tstyle = {};
+  if (!Array.isArray(settings.hidden)) settings.hidden = ['t3', 'p3'];
+  if (!settings.space) settings.space = {};
+  const userCss = document.createElement('style'); userCss.id = 'userTextStyles'; document.head.appendChild(userCss);
+  const fontFam = (id) => { const f = TEXT_FONTS.find(x => x.id === id); return f && f.fam; };
+
+  function applyTextStyles() {
+    const slip = $('slip');
+    let css = '';
+    TEXT_PARTS.forEach(part => {
+      const st = settings.tstyle[part.k] || {};
+      const d = [];
+      if (st.font && fontFam(st.font)) d.push('font-family: ' + fontFam(st.font) + ' !important');
+      if (st.weight) d.push('font-weight: ' + st.weight + ' !important');
+      if (st.italic) d.push('font-style: ' + st.italic + ' !important');
+      if (st.ls != null) d.push('letter-spacing: ' + st.ls + 'px !important');
+      if (st.color) d.push('color: ' + st.color + ' !important');
+      if (d.length) css += part.sel + ' { ' + d.join('; ') + '; }\n';
+      if (st.size && st.size !== 100) slip.style.setProperty('--sz-' + part.k, st.size / 100);
+      else slip.style.removeProperty('--sz-' + part.k);
+    });
+    userCss.textContent = css;
+    slip.dataset.hide = settings.hidden.join(' ');
+    SPACE.forEach(sp => {
+      const v = settings.space[sp.k];
+      if (v != null && v !== 100) slip.style.setProperty('--k-' + sp.k, v / 100); else slip.style.removeProperty('--k-' + sp.k);
+    });
+    setTimeout(() => scheduleHW(), 0); // handwriting layer is set up further down
+  }
+
+  $('stKey').innerHTML = TEXT_PARTS.map(p => '<option value="' + p.k + '">' + esc(p.name) + '</option>').join('');
+  $('stFont').innerHTML = TEXT_FONTS.map(f => '<option value="' + f.id + '">' + esc(f.name) + '</option>').join('');
+  $('spaceCtl').innerHTML = SPACE.map(sp => '<div class="ctl"><span>' + esc(sp.name) + '</span><input type="range" data-space="' + sp.k +
+    '" min="' + sp.min + '" max="' + sp.max + '" step="5"><b class="rv" data-space-val="' + sp.k + '"></b></div>').join('');
+
+  const curPart = () => TEXT_PARTS.find(p => p.k === $('stKey').value) || TEXT_PARTS[0];
+  function loadPart() {
+    const part = curPart(), st = settings.tstyle[part.k] || {};
+    $('stShowRow').classList.toggle('hidden', !part.hide);
+    $('stShow').checked = !settings.hidden.includes(part.k);
+    $('stFont').value = st.font || '';
+    $('stSize').value = st.size || 100; $('stSizeVal').textContent = (st.size || 100) + '%';
+    $('stWeight').value = st.weight || '';
+    $('stItalic').value = st.italic || '';
+    $('stLs').value = st.ls != null ? st.ls : 0; $('stLsVal').textContent = st.ls != null ? st.ls + 'px' : 'template';
+    const el = document.querySelector(part.sel.split(',')[0].replace('.slip', '#slip'));
+    $('stColor').value = st.color || (el ? rgbToHex(getComputedStyle(el).color) : '#000000');
+  }
+  function rgbToHex(c) {
+    const m = String(c).match(/\d+/g); if (!m) return '#000000';
+    return '#' + m.slice(0, 3).map(n => (+n).toString(16).padStart(2, '0')).join('');
+  }
+  function loadSpace() {
+    SPACE.forEach(sp => {
+      const v = settings.space[sp.k] != null ? settings.space[sp.k] : 100;
+      document.querySelector('[data-space="' + sp.k + '"]').value = v;
+      document.querySelector('[data-space-val="' + sp.k + '"]').textContent = v + '%';
+    });
+  }
+  function setPart(fn) {
+    const k = curPart().k;
+    const st = Object.assign({}, settings.tstyle[k] || {});
+    fn(st);
+    Object.keys(st).forEach(x => { if (st[x] === '' || st[x] == null) delete st[x]; });
+    if (Object.keys(st).length) settings.tstyle[k] = st; else delete settings.tstyle[k];
+    store(SETTINGS_KEY, settings); applyTextStyles(); loadPart();
+  }
+  $('stKey').addEventListener('change', loadPart);
+  $('stShow').addEventListener('change', () => {
+    const k = curPart().k;
+    settings.hidden = settings.hidden.filter(x => x !== k);
+    if (!$('stShow').checked) settings.hidden.push(k);
+    store(SETTINGS_KEY, settings); applyTextStyles();
+    flash(curPart().name + ($('stShow').checked ? ' shown.' : ' hidden.'));
+  });
+  $('stFont').addEventListener('change', () => setPart(st => { st.font = $('stFont').value; }));
+  $('stSize').addEventListener('input', () => setPart(st => { st.size = +$('stSize').value; }));
+  $('stWeight').addEventListener('change', () => setPart(st => { st.weight = $('stWeight').value; }));
+  $('stItalic').addEventListener('change', () => setPart(st => { st.italic = $('stItalic').value; }));
+  $('stLs').addEventListener('input', () => setPart(st => { st.ls = +$('stLs').value; }));
+  $('stColor').addEventListener('input', () => setPart(st => { st.color = $('stColor').value; }));
+  $('stColorReset').addEventListener('click', () => setPart(st => { delete st.color; }));
+  $('stReset').addEventListener('click', () => { setPart(st => { Object.keys(st).forEach(x => delete st[x]); }); flash(curPart().name + ' reset.'); });
+  $('stResetAll').addEventListener('click', async () => {
+    if (!(await ask('Reset fonts, sizes, spacing between letters and colours of every part of the bill?', 'Reset'))) return;
+    settings.tstyle = {}; settings.hidden = ['t3', 'p3'];
+    store(SETTINGS_KEY, settings); applyTextStyles(); loadPart(); flash('All text styles reset.');
+  });
+  $('spaceCtl').addEventListener('input', e => {
+    const k = e.target.dataset.space; if (!k) return;
+    settings.space[k] = +e.target.value;
+    document.querySelector('[data-space-val="' + k + '"]').textContent = e.target.value + '%';
+    store(SETTINGS_KEY, settings); applyTextStyles();
+  });
+  $('spReset').addEventListener('click', () => { settings.space = {}; store(SETTINGS_KEY, settings); applyTextStyles(); loadSpace(); flash('Spacing reset.'); });
+  // tapping a heading line or label on the bill selects it in the editor
+  $('slip').addEventListener('focusin', e => {
+    const t = e.target;
+    const k = t.matches('.t1') ? 't1' : t.matches('.t2') ? 't2' : t.matches('.t3') ? 't3' : t.matches('.sym') ? 'sym' :
+      t.matches('.name') ? 'name' : t.matches('.p1') ? 'p1' : t.matches('.p2') ? 'p2' : t.matches('.p3') ? 'p3' :
+      t.matches('label, .slbl') ? 'lbl' : t.matches('input.line') ? 'val' : null;
+    if (k && $('stKey').value !== k) { $('stKey').value = k; loadPart(); }
+  });
+  applyTextStyles(); loadPart(); loadSpace();
+
   // ---------- Natural handwriting ----------
   // Every bill gets its own seed, so each bill is "written" differently, but a bill always
   // looks the same on screen, in the preview, PDF, JPEG and print.
@@ -905,7 +1215,7 @@
         return '<span style="transform:translate(' + (cum + c.dx).toFixed(2) + 'px,' + c.dy.toFixed(2) + 'px) rotate(' + c.rot.toFixed(2) + 'deg) scale(' + c.s.toFixed(3) + ')">' + esc(g.s) + '</span>';
       }).join('');
       html += '<div class="hw-line" style="left:' + (r.left - sr.left) + 'px;top:' + (r.top - sr.top) + 'px;width:' + r.width + 'px;height:' + r.height + 'px;' +
-        'font:' + cs.fontStyle + ' ' + cs.fontWeight + ' ' + cs.fontSize + '/' + r.height + 'px ' + cs.fontFamily.replace(/"/g, "'") + ';' +
+        'font:' + cs.fontStyle + ' ' + cs.fontWeight + ' ' + cs.fontSize + '/' + r.height + 'px ' + cs.fontFamily.replace(/"/g, "'") + ';color:' + (cs.getPropertyValue('--hand').trim() || 'inherit') + ';' +
         'padding-left:' + cs.paddingLeft + ';padding-right:' + cs.paddingRight + ';text-align:' + cs.textAlign + ';' +
         'transform:translate(' + L.dx.toFixed(2) + 'px,' + L.dy.toFixed(2) + 'px) rotate(' + L.rot.toFixed(2) + 'deg)">' + chars + '</div>';
     });
@@ -1099,7 +1409,7 @@
     clone.querySelectorAll('.auto, .sig-btn, .hw-layer').forEach(el => el.remove());
     clone.classList.remove('hw-on');
     clone.querySelectorAll('[contenteditable]').forEach(el => el.removeAttribute('contenteditable'));
-    clone.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
+    clone.querySelectorAll('[id]').forEach(el => { if (!el.closest('svg')) el.removeAttribute('id'); }); // keep SVG pattern ids
     clone.querySelectorAll('label').forEach(el => el.removeAttribute('for'));
     clone.removeAttribute('id');
     clone.style.boxShadow = 'none';
@@ -1117,14 +1427,35 @@
     ? Array.from(new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(t), x => ({ s: x.segment, i: x.index }))
     : Array.from(t).reduce((a, ch) => { a.push({ s: ch, i: a.length ? a[a.length - 1].i + a[a.length - 1].s.length : 0 }); return a; }, []);
 
+  function roundRectPath(ctx, x, y, w, h, rad) {
+    rad = Math.max(0, Math.min(rad, w / 2, h / 2));
+    ctx.beginPath();
+    ctx.moveTo(x + rad, y); ctx.lineTo(x + w - rad, y); ctx.arcTo(x + w, y, x + w, y + rad, rad);
+    ctx.lineTo(x + w, y + h - rad); ctx.arcTo(x + w, y + h, x + w - rad, y + h, rad);
+    ctx.lineTo(x + rad, y + h); ctx.arcTo(x, y + h, x, y + h - rad, rad);
+    ctx.lineTo(x, y + rad); ctx.arcTo(x, y, x + rad, y, rad);
+    ctx.closePath();
+  }
+  function uniformBorder(cs) {
+    const w = cs.borderTopWidth, st = cs.borderTopStyle, c = cs.borderTopColor;
+    return ['Right', 'Bottom', 'Left'].every(sd => cs['border' + sd + 'Width'] === w && cs['border' + sd + 'Style'] === st && cs['border' + sd + 'Color'] === c);
+  }
   function drawBorders(ctx, r, cs) {
     [['Top', r.left, r.top, r.right, r.top, 0, 1], ['Bottom', r.left, r.bottom, r.right, r.bottom, 0, -1],
      ['Left', r.left, r.top, r.left, r.bottom, 1, 0], ['Right', r.right, r.top, r.right, r.bottom, -1, 0]].forEach(([side, x1, y1, x2, y2, dx, dy]) => {
       const w = parseFloat(cs['border' + side + 'Width']) || 0, style = cs['border' + side + 'Style'];
       if (!w || style === 'none' || style === 'hidden') return;
-      const o = w / 2;
       ctx.save();
-      ctx.strokeStyle = cs['border' + side + 'Color']; ctx.lineWidth = w;
+      ctx.strokeStyle = cs['border' + side + 'Color'];
+      if (style === 'double' && w >= 3) {          // two thin lines with a gap
+        [w / 6, w * 5 / 6].forEach(o => {
+          ctx.lineWidth = w / 3; ctx.beginPath();
+          ctx.moveTo(x1 + dx * o, y1 + dy * o); ctx.lineTo(x2 + dx * o, y2 + dy * o); ctx.stroke();
+        });
+        ctx.restore(); return;
+      }
+      const o = w / 2;
+      ctx.lineWidth = w;
       if (style === 'dotted') { ctx.lineCap = 'round'; ctx.setLineDash([0.01, w * 2]); }
       else if (style === 'dashed') { ctx.lineCap = 'butt'; ctx.setLineDash([w * 3, w * 2]); }
       ctx.beginPath(); ctx.moveTo(x1 + dx * o, y1 + dy * o); ctx.lineTo(x2 + dx * o, y2 + dy * o); ctx.stroke();
@@ -1151,13 +1482,16 @@
       const rr = range.getClientRects()[0];
       if (!rr || !rr.width) return;
       const baseline = rr.top + (rr.height - (asc + desc)) / 2 + asc;
-      if (!host) { ctx.fillText(g.s, rr.left, baseline); return; }
+      const tt = cs.textTransform;
+      const glyph = tt === 'uppercase' ? g.s.toUpperCase() : tt === 'lowercase' ? g.s.toLowerCase() :
+        tt === 'capitalize' && (n === 0 || /\s/.test(text[g.i - 1] || '')) ? g.s.toUpperCase() : g.s;
+      if (!host) { ctx.fillText(glyph, rr.left, baseline); return; }
       // same maths as the on-screen handwriting layer (layoutHW)
       const ox = hr.left, oy = hr.top + hr.height / 2, py = rr.top + rr.height * 0.7;
       ctx.save();
       ctx.translate(ox + L.dx, oy + L.dy); ctx.rotate(L.rot * Math.PI / 180); ctx.translate(-ox, -oy);
       ctx.translate(rr.left + cum + c.dx, py + c.dy); ctx.rotate(c.rot * Math.PI / 180); ctx.scale(c.s, c.s);
-      ctx.fillText(g.s, 0, baseline - py);
+      ctx.fillText(glyph, 0, baseline - py);
       ctx.restore();
     });
   }
@@ -1174,8 +1508,20 @@
     const cs = getComputedStyle(el);
     if (cs.display === 'none' || cs.visibility === 'hidden') return;
     const r = el.getBoundingClientRect();
-    if (visibleColor(cs.backgroundColor)) { ctx.fillStyle = cs.backgroundColor; ctx.fillRect(r.left, r.top, r.width, r.height); }
-    drawBorders(ctx, r, cs);
+    const rad = parseFloat(cs.borderTopLeftRadius) || 0;
+    if (visibleColor(cs.backgroundColor)) {
+      ctx.fillStyle = cs.backgroundColor;
+      if (rad) { roundRectPath(ctx, r.left, r.top, r.width, r.height, rad); ctx.fill(); }
+      else ctx.fillRect(r.left, r.top, r.width, r.height);
+    }
+    const bw = parseFloat(cs.borderTopWidth) || 0;
+    if (rad && bw && uniformBorder(cs) && cs.borderTopStyle !== 'none') {
+      ctx.save(); ctx.strokeStyle = cs.borderTopColor; ctx.lineWidth = bw;
+      if (cs.borderTopStyle === 'dashed') ctx.setLineDash([bw * 3, bw * 2]);
+      if (cs.borderTopStyle === 'dotted') { ctx.lineCap = 'round'; ctx.setLineDash([0.01, bw * 2]); }
+      roundRectPath(ctx, r.left + bw / 2, r.top + bw / 2, r.width - bw, r.height - bw, Math.max(0, rad - bw / 2)); ctx.stroke();
+      ctx.restore();
+    } else drawBorders(ctx, r, cs);
     const tag = el.tagName.toLowerCase();
     if (tag === 'svg') { await drawSvg(ctx, el, cs, r, paper, ink); return; }
     if (tag === 'img') {
@@ -1679,7 +2025,7 @@
       bills = d.bills; reviews = Array.isArray(d.reviews) ? d.reviews : [];
       if (d.settings) settings = Object.assign(settings, d.settings);
       store(BILLS_KEY, bills); store(REVIEWS_KEY, reviews); store(SETTINGS_KEY, settings);
-      applyText(); applyHeading(); renderRegister(); updateParties(); newBill(); flash('Backup restored.');
+      applyText(); applyHeading(); applyTextStyles(); loadPart(); loadSpace(); renderRegister(); updateParties(); newBill(); flash('Backup restored.');
     }).catch(() => flash('That file is not a valid backup.', true));
     e.target.value = '';
   });

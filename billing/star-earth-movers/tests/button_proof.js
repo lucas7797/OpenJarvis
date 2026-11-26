@@ -171,6 +171,99 @@ const tab = (v) => P.click(`.tab[data-view="${v}"]`);
   }
   await shot('All 15 logos', P.locator('#logoGrid'));
 
+  // ---------- Text editor & spacing ----------
+  const cssVar = (n) => P.evaluate((n) => document.getElementById('slip').style.getPropertyValue(n), n);
+  const fsz = (sel) => P.evaluate((sel) => parseFloat(getComputedStyle(document.querySelector(sel)).fontSize), sel);
+  await P.click('#textPanel summary');
+  const partCount = await P.locator('#stKey option').count();
+  await check('Text editor', 'Every part of the bill can be picked (' + partCount + ' parts)', async () => {
+    expect(partCount === 10, String(partCount));
+    const fonts = await P.locator('#stFont option').count();
+    expect(fonts >= 20, fonts + ' fonts');
+    return partCount + ' parts, ' + fonts + ' fonts to choose from';
+  });
+  await check('Text editor', 'Size slider (Title line 1 → 150%)', async () => {
+    await P.selectOption('#stKey', 't1');
+    const before = await fsz('#slip .t1');
+    await P.fill('#stSize', '150'); await P.dispatchEvent('#stSize', 'input');
+    const after = await fsz('#slip .t1');
+    expect(Math.abs(after / before - 1.5) < 0.02, before + ' → ' + after);
+    return before + 'px → ' + after + 'px';
+  });
+  await check('Text editor', 'Font, weight, style, letter spacing, colour', async () => {
+    await P.selectOption('#stFont', 'bebas'); await P.selectOption('#stWeight', '400'); await P.selectOption('#stItalic', 'italic');
+    await P.fill('#stLs', '6'); await P.dispatchEvent('#stLs', 'input');
+    await P.fill('#stColor', '#c81e1e'); await P.dispatchEvent('#stColor', 'input');
+    const cs = await P.evaluate(() => { const c = getComputedStyle(document.querySelector('#slip .t1')); return [c.fontFamily, c.fontWeight, c.fontStyle, c.letterSpacing, c.color]; });
+    expect(cs[0].includes('Bebas') && cs[1] === '400' && cs[2] === 'italic' && cs[3] === '6px' && cs[4] === 'rgb(200, 30, 30)', cs.join(' | '));
+    const saved = (await ls('sem_settings_v1')).tstyle.t1;
+    expect(saved && saved.font === 'bebas' && saved.size === 150, JSON.stringify(saved));
+    return cs.join(' · ');
+  });
+  await check('Text editor', '"Template colour" and "Reset this part"', async () => {
+    await P.click('#stColorReset');
+    expect(!((await ls('sem_settings_v1')).tstyle.t1 || {}).color, 'colour not cleared');
+    await P.click('#stReset');
+    expect(!(await ls('sem_settings_v1')).tstyle.t1, 'not reset');
+    expect(!(await cssVar('--sz-t1')), 'size not reset');
+    return 'Title line 1 back to the template look';
+  });
+  await check('Text editor', 'Show the tagline and extra address line', async () => {
+    for (const k of ['t3', 'p3']) { await P.selectOption('#stKey', k); await P.check('#stShow'); }
+    const vis = await P.evaluate(() => [getComputedStyle(document.querySelector('#slip .t3')).display, getComputedStyle(document.querySelector('#slip .p3')).display]);
+    expect(vis.every((d) => d !== 'none'), vis.join());
+    return 'both new lines appear and can be typed into';
+  });
+  await check('Text editor', 'Hide a line (symbol உ)', async () => {
+    await P.selectOption('#stKey', 'sym'); await P.uncheck('#stShow');
+    const d = await P.evaluate(() => getComputedStyle(document.querySelector('#slip .sym')).display);
+    await P.check('#stShow');
+    expect(d === 'none', d);
+    return 'hidden, then shown again';
+  });
+  await check('Text editor', 'Tapping a line on the bill selects it in the editor', async () => {
+    await P.click('#slip .owner .name');
+    expect(await P.inputValue('#stKey') === 'name', await P.inputValue('#stKey'));
+    return 'tapped owner name → editor shows "Owner name"';
+  });
+  await check('Text editor', 'Labels and values sizes', async () => {
+    await P.selectOption('#stKey', 'lbl'); await P.fill('#stSize', '120'); await P.dispatchEvent('#stSize', 'input');
+    await P.selectOption('#stKey', 'val'); await P.fill('#stSize', '120'); await P.dispatchEvent('#stSize', 'input');
+    const v = [await cssVar('--sz-lbl'), await cssVar('--sz-val')];
+    expect(v[0] === '1.2' && v[1] === '1.2', v.join());
+    return 'labels 120%, values 120%';
+  });
+  const spaceKeys = await P.evaluate(() => [...document.querySelectorAll('[data-space]')].map((e) => e.dataset.space));
+  for (const k of spaceKeys) {
+    await check('Spacing', 'Slider "' + k + '"', async () => {
+      await P.fill(`[data-space="${k}"]`, '150'); await P.dispatchEvent(`[data-space="${k}"]`, 'input');
+      const v = await cssVar('--k-' + k);
+      expect(v === '1.5', v);
+      return 'set to 150%';
+    });
+  }
+  await check('Spacing', 'Gap between lines really moves the rows', async () => {
+    const gap = () => P.evaluate(() => document.querySelector('#slip .field[data-f="closeMeter"]').getBoundingClientRect().top - document.querySelector('#slip .field[data-f="startMeter"]').getBoundingClientRect().top);
+    const a = await gap();
+    await P.fill('[data-space="row"]', '60'); await P.dispatchEvent('[data-space="row"]', 'input');
+    const b = await gap();
+    expect(b < a - 10, a + ' → ' + b);
+    return 'row step ' + Math.round(a) + 'px → ' + Math.round(b) + 'px';
+  });
+  await shot('Text, size & spacing editor', P.locator('#textPanel'));
+  await check('Spacing', '"Reset spacing" button', async () => {
+    await P.click('#spReset');
+    expect(!(await cssVar('--k-row')) && !(await cssVar('--k-head')), 'not reset');
+    return 'all spacing back to 100%';
+  });
+  await check('Text editor', '"Reset all text styles" button', async () => {
+    await P.click('#stResetAll'); await yes();
+    const s = await ls('sem_settings_v1');
+    expect(!Object.keys(s.tstyle).length && s.hidden.join() === 't3,p3', JSON.stringify(s.tstyle) + s.hidden);
+    return 'every part back to its template look';
+  });
+  await P.click('#textPanel summary');
+
   // ---------- 10 handwriting fonts ----------
   const fontCount = await P.locator('.font-opt').count();
   await check('Handwriting', 'Picker has 10 handwriting styles (+ template default)', async () => {
@@ -646,7 +739,7 @@ const tab = (v) => P.click(`.tab[data-view="${v}"]`);
   await tab('templatesView');
   await P.waitForTimeout(300);
   const tplCount = await P.locator('.tpl-card').count();
-  await check('Templates', 'Template screen has 15 designs', async () => { expect(tplCount === 15, String(tplCount)); return '15 found'; });
+  await check('Templates', 'Template screen has 25 designs', async () => { expect(tplCount === 25, String(tplCount)); return '25 found'; });
   await shot('Templates screen', P.locator('#templatesView'));
   const papers = new Set();
   for (let i = 0; i < tplCount; i++) {
