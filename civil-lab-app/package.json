@@ -1,0 +1,22 @@
+{
+  "name": "civil-site-lab-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Android app wrapper for Civil Site Lab (Capacitor)",
+  "scripts": {
+    "copy-web": "node scripts/copy-web.js",
+    "sync": "npm run copy-web && npx cap sync android",
+    "open": "npx cap open android",
+    "build:debug": "npm run sync && cd android && ./gradlew assembleDebug",
+    "build:release": "npm run sync && cd android && ./gradlew assembleRelease"
+  },
+  "dependencies": {
+    "@capacitor/android": "6.2.4",
+    "@capacitor/core": "6.2.4",
+    "@capacitor/filesystem": "6.0.4",
+    "@capacitor/share": "6.0.4"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "6.2.4"
+  }
+}

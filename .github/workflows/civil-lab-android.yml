@@ -1,0 +1,46 @@
+name: Civil Site Lab – Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "civil-lab/**"
+      - "civil-lab-app/**"
+      - ".github/workflows/civil-lab-android.yml"
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: civil-lab-app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Copy web app and sync Android project
+        run: npm run sync
+
+      - name: Build APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+          cp app/build/outputs/apk/debug/app-debug.apk ../CivilSiteLab.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: CivilSiteLab-apk
+          path: civil-lab-app/CivilSiteLab.apk

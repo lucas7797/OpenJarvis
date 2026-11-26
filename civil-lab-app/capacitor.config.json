@@ -1,0 +1,6 @@
+{
+  "appId": "com.civilsitelab.app",
+  "appName": "Civil Site Lab",
+  "webDir": "www",
+  "android": { "allowMixedContent": false, "captureInput": true }
+}
