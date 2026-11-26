@@ -1,0 +1,838 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#13263b">
+<title>Civil Site Lab</title>
+<script src="vendor/html2canvas.min.js"></script>
+<script src="vendor/jspdf.umd.min.js"></script>
+<script>
+if(!window.html2canvas)document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"><\/script>');
+if(!window.jspdf)document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"><\/script>');
+</script>
+<style>
+*{box-sizing:border-box}
+:root{--bg:#eef1f4;--panel:#fff;--ink:#17202b;--mut:#5b6876;--line:#d6dde4;--acc:#0b5cad;--accs:#e7f0fa;--nav:#13263b;--navi:#c3d0dd;--navh:#1d3550;--navon:#2b5d93}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1318;--panel:#18202a;--ink:#e4e9ee;--mut:#98a6b4;--line:#2c3744;--acc:#62a8f2;--accs:#1a2b3e;--nav:#0a1016;--navh:#15212d;--navon:#22466f}}
+:root[data-theme="dark"]{--bg:#0e1318;--panel:#18202a;--ink:#e4e9ee;--mut:#98a6b4;--line:#2c3744;--acc:#62a8f2;--accs:#1a2b3e;--nav:#0a1016;--navh:#15212d;--navon:#22466f}
+html,body{margin:0}
+body{font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+button{font:inherit;cursor:pointer}
+.top{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:8px;height:52px;padding:0 10px;background:var(--nav);color:#fff;box-shadow:0 1px 0 rgba(255,255,255,.06)}
+.ib{background:transparent;border:0;color:#fff;font-size:20px;width:36px;height:36px;border-radius:6px}
+.ib:hover{background:var(--navh)}
+.brand{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700;letter-spacing:.2px}
+.brand small{font-weight:400;opacity:.7;margin-left:6px}
+.acts{display:flex;gap:6px}
+.acts button{background:var(--navh);color:#fff;border:1px solid rgba(255,255,255,.14);border-radius:6px;padding:6px 10px;font-size:13px;white-space:nowrap}
+.acts button:hover{background:var(--navon)}
+.acts button.pri{background:#1f7ae0;border-color:#1f7ae0}
+.layout{display:flex;min-height:calc(100vh - 52px)}
+nav{width:258px;flex:none;background:var(--nav);color:var(--navi);overflow:auto;position:sticky;top:52px;height:calc(100vh - 52px);padding-bottom:30px}
+nav .nsearch{padding:10px}
+nav .nsearch input{width:100%;padding:7px 9px;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#fff}
+.ngh{font-size:11px;text-transform:uppercase;letter-spacing:.08em;opacity:.6;padding:12px 14px 4px}
+nav a{display:block;padding:6px 14px 6px 18px;color:var(--navi);text-decoration:none;font-size:13.5px;border-left:3px solid transparent}
+nav a:hover{background:var(--navh);color:#fff}
+nav a.on{background:var(--navon);color:#fff;border-left-color:#7fb8ff}
+main{flex:1;min-width:0;padding:16px 16px 60px}
+#scrim{display:none}
+@media (max-width:900px){
+ nav{position:fixed;left:0;top:52px;bottom:0;height:auto;z-index:35;transform:translateX(-105%);transition:transform .2s}
+ body.navopen nav{transform:none}
+ body.navopen #scrim{display:block;position:fixed;inset:52px 0 0 0;background:rgba(0,0,0,.4);z-index:30}
+ main{padding:10px 8px 60px}
+ .brand small{display:none}
+}
+@media (max-width:480px){.acts button{padding:6px 7px;font-size:12px}#bPrint{display:none}}
+/* ---------- report sheet (paper, always light) ---------- */
+.sheet{background:#fff;color:#111;max-width:1040px;margin:0 auto;padding:22px 26px;border:1px solid #c9d1d9;border-radius:4px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.sheet input,.sheet select,.sheet textarea{font:inherit;color:#111;background:#f6f9fc;border:1px solid #d3dbe3;border-radius:3px;padding:4px 6px;width:100%;min-width:0}
+.sheet input:focus,.sheet select:focus,.sheet textarea:focus{outline:2px solid #6aa7ea;outline-offset:-1px;background:#fff}
+.sheet textarea{min-height:54px;resize:vertical}
+.rh{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;border-bottom:2px solid #1c2b3a;padding-bottom:10px}
+.rh .logo img{max-height:64px;max-width:120px;display:block}
+.rh .rht{text-align:center}
+.rh .lab input,.rh .lab .pv{font-weight:700;font-size:15px;text-align:center;text-transform:uppercase;letter-spacing:.04em;background:transparent;border-color:transparent}
+.rh h1{margin:4px 0 2px;font-size:17px}
+.rh h1 textarea,.rh h1 .pv{font-size:17px;font-weight:700;text-align:center;background:transparent;border-color:transparent;resize:none;min-height:0;overflow:hidden;line-height:1.3;display:block}
+.rh .std input,.rh .std .pv{font-size:12px;text-align:center;color:#444;background:transparent;border-color:transparent}
+.rh .rno{display:grid;grid-template-columns:auto 130px;gap:4px 6px;font-size:12px;align-items:center}
+.rh .rno b{font-weight:600}
+.pgrid{display:grid;grid-template-columns:1fr 1fr;border:1px solid #8c98a4;border-bottom:0;margin:12px 0}
+.pf{display:flex;border-bottom:1px solid #8c98a4;min-width:0}
+.pf:nth-child(odd){border-right:1px solid #8c98a4}
+.pf>span{flex:0 0 40%;background:#f0f3f6;padding:5px 7px;font-weight:600;font-size:12px;border-right:1px solid #c5cdd5}
+.pf>input,.pf>.pv{border:0;background:transparent;border-radius:0;padding:5px 7px;font-size:12.5px}
+.pf.wide{grid-column:1/-1;border-right:0}
+.pf.wide>span{flex-basis:20%}
+.sheet h3{font-size:13.5px;margin:16px 0 6px;padding:4px 8px;background:#1c2b3a;color:#fff;border-radius:2px}
+.frow{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px 12px;margin:8px 0}
+.fld{display:flex;flex-direction:column;gap:2px;min-width:0}
+.fld>span{font-size:11.5px;color:#46525e;font-weight:600}
+.fld.out b{display:block;padding:4px 7px;background:#edf6ef;border:1px solid #b9dcc4;border-radius:3px;min-height:28px;font-size:14px}
+.fld.out small{color:#555}
+.frow.res .fld.out b{font-size:16px}
+.tw{overflow-x:auto;margin:6px 0;-webkit-overflow-scrolling:touch}
+table.tb{border-collapse:collapse;width:100%;font-size:12.5px}
+.tb th,.tb td{border:1px solid #8f9aa6;padding:3px 4px;text-align:center;vertical-align:middle}
+.tb th{background:#e8edf2;font-weight:600;font-size:11.5px;line-height:1.25}
+.tb td input,.tb td select{text-align:center;padding:3px 4px;min-width:56px;background:#f8fbfd}
+.tb td.o{background:#f4f8f4;font-variant-numeric:tabular-nums;min-width:60px}
+.tb td.l{text-align:left}
+.tb td.l input{text-align:left}
+.tb .x{border:0;background:transparent;color:#b3261e;font-size:16px;line-height:1;padding:2px 6px}
+.tb tfoot td{font-weight:700;background:#eef2f6}
+.pass{color:#0d6b33!important;font-weight:700}
+.fail{color:#b3261e!important;font-weight:700}
+.btn{background:#fff;border:1px solid #b9c4cf;color:#17324d;border-radius:5px;padding:5px 10px;font-size:12.5px}
+.btn:hover{background:#eef4fa}
+.btn.pri{background:#0b5cad;color:#fff;border-color:#0b5cad}
+.btns{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.addr{margin:2px 0 6px;background:transparent;border:1px dashed #9fb0c1;color:#0b5cad;border-radius:4px;padding:3px 10px;font-size:12px}
+.result{margin:14px 0 6px;padding:9px 12px;border-radius:4px;font-weight:700;font-size:14px;border:1px solid}
+.result.ok{background:#e3f4e8;color:#0d5c2e;border-color:#9bd3ad}
+.result.bad{background:#fde8e6;color:#9a1d15;border-color:#efaaa3}
+.result.na{background:#f4f6f8;color:#66717d;border:1px dashed #b8c2cc;font-weight:500}
+.rem{margin-top:10px}
+.rem b{font-size:12px}
+.note{font-size:11.5px;color:#5a6672;margin:4px 0}
+canvas.ch{width:100%;height:300px;display:block;margin-top:10px;border:1px solid #c5cdd5;background:#fff}
+img.chimg{width:100%;display:block;margin-top:10px;border:1px solid #c5cdd5}
+.sigs{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:18px;margin-top:26px}
+.sg{text-align:center;font-size:12px}
+.sgimg{height:66px;border-bottom:1px solid #333;display:flex;align-items:flex-end;justify-content:center;cursor:pointer;position:relative}
+.sgimg img{max-height:62px;max-width:100%}
+.sgimg .hint{color:#8a96a3;font-size:11px;padding-bottom:4px}
+.sgl{font-weight:700;margin-top:4px}
+.sgn{color:#333}
+.sgd{color:#666;font-size:11px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.card{border:1px solid #b9c4cf;border-radius:4px;padding:8px 10px}
+.card h4{margin:0 0 6px;font-size:13px;color:#1c2b3a}
+.card .frow{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
+.st{font-weight:700}
+@media (max-width:640px){
+ .sheet{padding:12px 10px}
+ .rh{grid-template-columns:1fr}
+ .rh .logo{display:none}
+ .rh .rno{grid-template-columns:auto 1fr}
+ .pgrid{grid-template-columns:1fr}
+ .pf:nth-child(odd){border-right:0}
+ .pf.wide>span{flex-basis:40%}
+}
+/* pdf render */
+.pdfhost{position:fixed;left:-12000px;top:0;width:820px;background:#fff;z-index:-1}
+.sheet.pdf{width:820px;max-width:none;border:0;box-shadow:none;margin:0;padding:18px 22px;border-radius:0}
+.pdf .pv{display:block;min-height:1.3em;padding:3px 5px;white-space:pre-wrap;word-break:break-word}
+.pdf .tb td .pv{display:inline-block;padding:2px 3px;text-align:center;white-space:nowrap;word-break:normal}
+.pdf .tb td.l .pv{display:block;text-align:left;white-space:pre-wrap}
+.pdf .tb th{font-size:10.5px}
+.pdf .fld .pv{border-bottom:1px solid #b7c0c9}
+.pdf .rh .rno .pv{border-bottom:1px solid #b7c0c9}
+.pdf .result.na,.pdf .np,.pdf .addr,.pdf .btns{display:none!important}
+.pdf .sgimg .hint{display:none}
+.pdf .rem .pv{border:1px solid #c5cdd5;min-height:40px}
+/* tools (non-report) */
+.tool{max-width:1040px;margin:0 auto;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:18px}
+.tool h2{margin:0 0 4px;font-size:19px}
+.tool p.sub{margin:0 0 14px;color:var(--mut)}
+.tool input,.tool select,.tool textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:6px 8px;width:100%}
+.tool .btn{background:var(--panel);color:var(--ink);border-color:var(--line)}
+.tool .btn:hover{background:var(--accs)}
+.tool .btn.pri{background:var(--acc);color:#fff;border-color:var(--acc)}
+.tool .btn.dan{color:#c0392b}
+.tool .frow .fld>span{color:var(--mut)}
+.tool table{border-collapse:collapse;width:100%;font-size:13px}
+.tool th,.tool td{border-bottom:1px solid var(--line);padding:7px 6px;text-align:left;vertical-align:middle}
+.tool th{color:var(--mut);font-weight:600;font-size:12px}
+.slot{border:1px solid var(--line);border-radius:8px;padding:12px;margin-bottom:12px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.slot .pad{grid-column:1/-1}
+.padc{width:100%;height:170px;background:#fff;border:1px dashed #9aa8b6;border-radius:6px;touch-action:none;display:block}
+@media (max-width:640px){.slot{grid-template-columns:1fr}}
+.pages{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-top:14px}
+.pg{border:1px solid var(--line);border-radius:8px;padding:8px;background:var(--bg)}
+.pg img{width:100%;height:220px;object-fit:contain;background:#fff;border-radius:4px;display:block}
+.pg .row{display:flex;gap:4px;margin-top:6px;align-items:center}
+.pg .row select{flex:1;padding:4px}
+.pg .row button{padding:4px 7px}
+#camwrap{margin-top:12px;background:#000;border-radius:8px;padding:8px;text-align:center}
+#camwrap video{max-width:100%;max-height:60vh;border-radius:6px}
+.chk{display:flex;gap:8px;align-items:center;margin:10px 0}
+.chk input{width:auto}
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#1c2b3a;color:#fff;padding:9px 16px;border-radius:20px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:100;max-width:90vw;text-align:center}
+#toast.on{opacity:1}
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:90;padding:14px}
+#modal.on{display:flex}
+.mbox{background:var(--panel);color:var(--ink);border-radius:10px;padding:18px;max-width:560px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,.3)}
+.mbox h3{margin:0 0 10px}
+.mbox .btns .btn{background:var(--panel);color:var(--ink);border-color:var(--line);padding:8px 12px}
+.mbox .btns .btn.pri{background:var(--acc);color:#fff;border-color:var(--acc)}
+#busy{position:fixed;inset:0;background:rgba(255,255,255,.55);display:none;align-items:center;justify-content:center;z-index:95;font-weight:700;color:#13263b}
+#busy.on{display:flex}
+@media print{
+ .top,nav,#toast,#modal,.np,.addr,.btns,.result.na{display:none!important}
+ body{background:#fff}
+ main{padding:0}
+ .layout{display:block}
+ .sheet{border:0;box-shadow:none;max-width:none;padding:0}
+ .sheet input,.sheet select,.sheet textarea{border:0;background:transparent;-webkit-appearance:none;appearance:none}
+ canvas.ch{break-inside:avoid}
+ tr,.card,.sigs{break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<header class="top">
+ <button class="ib" id="menuBtn" aria-label="Menu">☰</button>
+ <div class="brand">Civil Site Lab <small>On-site Test Report Generator</small></div>
+ <div class="acts">
+  <button id="bNew" title="Reset this test to blank">New</button>
+  <button id="bSave" title="Save to records (Ctrl+S)">Save</button>
+  <button id="bPdf" class="pri" title="Download PDF">PDF</button>
+  <button id="bShare" title="Share PDF">Share</button>
+  <button id="bPrint" title="Print">Print</button>
+ </div>
+</header>
+<div class="layout">
+ <nav id="nav"></nav>
+ <div id="scrim"></div>
+ <main id="main"></main>
+</div>
+<div id="modal"><div class="mbox" id="mbox"></div></div>
+<div id="toast"></div>
+<div id="busy">Preparing PDF…</div>
+<script>
+'use strict';
+/* =================== utilities =================== */
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const num=v=>{if(v===null||v===undefined||v==='')return NaN;const n=parseFloat(String(v).replace(/,/g,''));return isFinite(n)?n:NaN};
+const ok=n=>typeof n==='number'&&isFinite(n);
+const f=(v,d=2)=>ok(v)?(+v).toFixed(d):'';
+const today=()=>new Date().toISOString().slice(0,10);
+const fmtDate=s=>{if(!s)return'';const p=s.split('-');return p.length===3?`${p[2]}-${p[1]}-${p[0]}`:s};
+const avg=a=>{const b=a.filter(ok);return b.length?b.reduce((x,y)=>x+y,0)/b.length:NaN};
+const deep=o=>JSON.parse(JSON.stringify(o));
+const rep=(n,fn)=>Array.from({length:n},fn);
+function gp(o,p){return p.split('.').reduce((a,k)=>a==null?a:a[k],o)}
+function sp(o,p,v){const ks=p.split('.');let a=o;for(let i=0;i<ks.length-1;i++){if(a[ks[i]]==null)a[ks[i]]=/^\d+$/.test(ks[i+1])?[]:{};a=a[ks[i]]}a[ks[ks.length-1]]=v}
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),2600)}
+function modal(html){$('#mbox').innerHTML=html;$('#modal').classList.add('on')}
+function closeModal(){$('#modal').classList.remove('on');$('#mbox').innerHTML=''}
+$('#modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});
+function download(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500)}
+function interp(pts,x){if(!pts.length)return NaN;if(x<=pts[0][0])return pts[0][1];for(let i=1;i<pts.length;i++){if(x<=pts[i][0]){const[a,b]=pts[i-1],[c,d]=pts[i];return b+(d-b)*(x-a)/(c-a)}}return pts[pts.length-1][1]}
+function solve3(M){for(let i=0;i<3;i++){let p=i;for(let r=i+1;r<3;r++)if(Math.abs(M[r][i])>Math.abs(M[p][i]))p=r;[M[i],M[p]]=[M[p],M[i]];if(Math.abs(M[i][i])<1e-12)return null;for(let r=0;r<3;r++){if(r===i)continue;const k=M[r][i]/M[i][i];for(let c=i;c<4;c++)M[r][c]-=k*M[i][c]}}return[M[0][3]/M[0][0],M[1][3]/M[1][1],M[2][3]/M[2][2]]}
+function quadFit(pts){let n=pts.length,a=0,b=0,c=0,d=0,e=0,g=0,h=0;for(const[x,y]of pts){const x2=x*x;a+=x;b+=x2;c+=x2*x;d+=x2*x2;e+=y;g+=x*y;h+=x2*y}return solve3([[d,c,b,h],[c,b,a,g],[b,a,n,e]])}
+function linFit(pts){const n=pts.length;let sx=0,sy=0,sxx=0,sxy=0;for(const[x,y]of pts){sx+=x;sy+=y;sxx+=x*x;sxy+=x*y}const den=n*sxx-sx*sx;if(!den)return null;const m=(n*sxy-sx*sy)/den;return[m,(sy-m*sx)/n]}
+function peak(pts){if(pts.length<3)return null;const s=[...pts].sort((a,b)=>a[0]-b[0]);let i=0;s.forEach((p,j)=>{if(p[1]>s[i][1])i=j});if(i>0&&i<s.length-1){const q=quadFit([s[i-1],s[i],s[i+1]]);if(q&&q[0]<0){const x=-q[1]/(2*q[0]);if(x>=s[i-1][0]&&x<=s[i+1][0])return[x,q[0]*x*x+q[1]*x+q[2]]}}return[s[i][0],s[i][1]]}
+
+/* =================== state =================== */
+const LS='civlab_v1';
+function defSig(){return[{label:'Tested by',name:'',des:'Lab Technician',on:true,img:''},{label:'Checked by',name:'',des:'Quality Engineer',on:true,img:''},{label:"Contractor's Representative",name:'',des:'',on:true,img:''},{label:'Engineer / Consultant',name:'',des:'',on:true,img:''}]}
+function defState(){return{project:{name:'',client:'',consultant:'',contractor:'',agreement:''},settings:{lab:'Site Quality Control Laboratory',logo:'',theme:'auto',annex:false},sig:defSig(),tests:{},records:[],cur:''}}
+let S;try{S=JSON.parse(localStorage.getItem(LS))}catch(e){}
+if(!S||!S.tests)S=defState();
+S.records??=[];S.sig??=defSig();S.settings??=defState().settings;S.project??=defState().project;
+let saveT;function save(){clearTimeout(saveT);saveT=setTimeout(saveNow,250)}
+function saveNow(){try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){toast('Device storage is full — export a backup from Records and delete old records')}}
+function applyTheme(){const t=S.settings.theme;if(t==='auto')delete document.documentElement.dataset.theme;else document.documentElement.dataset.theme=t}
+applyTheme();
+
+/* =================== module registry =================== */
+const MODS=[],MOD={};
+function reg(m){MODS.push(m);MOD[m.id]=m}
+let cur='';
+function fresh(m){const d=m.init?m.init():{};d.meta={title:m.rt||m.title,std:m.std||'',no:'',date:today(),remarks:'',sign:{},signAt:{}};return d}
+function D(id=cur){const m=MOD[id];if(!S.tests[id])S.tests[id]=fresh(m);const d=S.tests[id];if(!d.meta)d.meta=fresh(m).meta;d.meta.sign??={};d.meta.signAt??={};return d}
+function bind(p){if(p.startsWith('@p.'))return[S.project,p.slice(3)];if(p.startsWith('@set.'))return[S.settings,p.slice(5)];return[D(),p]}
+
+/* =================== html helpers =================== */
+const I=(p,v,o={})=>`<input data-k="${p}" value="${esc(v)}" ${o.t?`type="${o.t}"`:''} ${o.ph?`placeholder="${esc(o.ph)}"`:''} ${o.c?`class="${o.c}"`:''} autocomplete="off">`;
+const N=(p,v,o={})=>`<input data-k="${p}" value="${esc(v)}" inputmode="decimal" ${o.ph?`placeholder="${esc(o.ph)}"`:''} autocomplete="off">`;
+const SEL=(p,v,opts)=>`<select data-k="${p}">${opts.map(x=>{const[a,b]=Array.isArray(x)?x:[x,x];return`<option value="${esc(a)}" ${String(a)===String(v)?'selected':''}>${esc(b)}</option>`}).join('')}</select>`;
+const F=(label,html,cls='')=>`<label class="fld ${cls}"><span>${label}</span>${html}</label>`;
+const O=(label,key,unit='')=>`<div class="fld out"><span>${label}${unit?` (${unit})`:''}</span><b data-o="${key}"></b></div>`;
+function T(list,cols,rows,o={}){
+ let h=`<div class="tw"><table class="tb"><thead><tr>${o.sn?`<th>${o.sn}</th>`:''}${cols.map(c=>`<th>${c.h}</th>`).join('')}${o.fixed?'':'<th class="np"></th>'}</tr></thead><tbody>`;
+ rows.forEach((r,i)=>{h+=`<tr>${o.sn?`<td>${i+1}</td>`:''}${cols.map(c=>{const p=`${list}.${i}.${c.k}`;if(c.t==='o')return`<td class="o" data-o="${p}"></td>`;if(c.t==='s')return`<td>${SEL(p,r[c.k],c.opts)}</td>`;if(c.t==='txt')return`<td class="${c.l?'l':''}">${I(p,r[c.k])}</td>`;return`<td>${N(p,r[c.k])}</td>`}).join('')}${o.fixed?'':`<td class="np"><button class="x" data-act="del" data-l="${list}" data-i="${i}" title="Remove row">×</button></td>`}</tr>`});
+ h+=`</tbody>${o.foot||''}</table></div>`;
+ if(!o.fixed)h+=`<button class="addr np" data-act="add" data-l="${list}">+ Add row</button>`;
+ return h}
+const GRADES=[10,15,20,25,30,35,40,45,50,55,60,65,70,75,80].map(v=>[String(v),'M'+v]);
+const stat=b=>b===null||b===undefined?'':(b?'PASS':'FAIL');
+const lim=(v,lo,hi)=>{if(!ok(v))return null;if(ok(lo)&&v<lo-1e-9)return false;if(ok(hi)&&v>hi+1e-9)return false;return(ok(lo)||ok(hi))?true:null};
+
+/* =================== chart =================== */
+function chart(cv,c){
+ const dpr=Math.max(2,window.devicePixelRatio||1),W=cv.clientWidth||760,H=c.h||300;
+ cv.width=W*dpr;cv.height=H*dpr;const g=cv.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);
+ g.fillStyle='#fff';g.fillRect(0,0,W,H);
+ const L=52,R=14,Tp=26,B=40,pw=W-L-R,ph=H-Tp-B;
+ const lx=v=>Math.log10(v);
+ const tx=c.xlog?v=>L+(lx(v)-lx(c.x0))/(lx(c.x1)-lx(c.x0))*pw:v=>L+(v-c.x0)/(c.x1-c.x0)*pw;
+ const ty=v=>Tp+ph-(v-c.y0)/(c.y1-c.y0)*ph;
+ g.font='11px system-ui,Arial';g.strokeStyle='#e3e8ed';g.fillStyle='#444';g.lineWidth=1;
+ const yt=c.yt||rep(6,(_,i)=>c.y0+(c.y1-c.y0)*i/5);
+ g.textAlign='right';g.textBaseline='middle';
+ yt.forEach(v=>{const y=ty(v);g.beginPath();g.moveTo(L,y);g.lineTo(L+pw,y);g.stroke();g.fillText(c.yf?c.yf(v):+v.toFixed(3),L-5,y)});
+ const xt=c.xt||rep(7,(_,i)=>c.x0+(c.x1-c.x0)*i/6);
+ g.textAlign='center';g.textBaseline='top';
+ let lastX=-99;xt.forEach(v=>{const x=tx(v);if(x<L-1||x>L+pw+1)return;g.beginPath();g.moveTo(x,Tp);g.lineTo(x,Tp+ph);g.stroke();if(x-lastX>22){g.fillText(c.xf?c.xf(v):+(+v).toFixed(3),x,Tp+ph+4);lastX=x}});
+ g.strokeStyle='#333';g.strokeRect(L,Tp,pw,ph);
+ g.fillStyle='#222';g.font='600 11.5px system-ui,Arial';g.fillText(c.xl||'',L+pw/2,H-15);
+ g.save();g.translate(12,Tp+ph/2);g.rotate(-Math.PI/2);g.textBaseline='middle';g.fillText(c.yl||'',0,0);g.restore();
+ if(c.title){g.textAlign='left';g.textBaseline='top';g.fillText(c.title,L,6)}
+ g.save();g.beginPath();g.rect(L,Tp,pw,ph);g.clip();
+ (c.series||[]).forEach(s=>{const P=s.pts.filter(p=>ok(p[0])&&ok(p[1])&&(!c.xlog||p[0]>0)).map(p=>[tx(p[0]),ty(p[1])]);if(!P.length)return;
+  g.strokeStyle=s.col;g.fillStyle=s.col;g.lineWidth=s.w||2;g.setLineDash(s.dash||[]);
+  if(s.line!==false&&P.length>1){g.beginPath();g.moveTo(P[0][0],P[0][1]);if(s.smooth&&P.length>2){for(let i=0;i<P.length-1;i++){const p0=P[i-1]||P[i],p1=P[i],p2=P[i+1],p3=P[i+2]||p2;g.bezierCurveTo(p1[0]+(p2[0]-p0[0])/6,p1[1]+(p2[1]-p0[1])/6,p2[0]-(p3[0]-p1[0])/6,p2[1]-(p3[1]-p1[1])/6,p2[0],p2[1])}}else P.slice(1).forEach(p=>g.lineTo(p[0],p[1]));g.stroke()}
+  g.setLineDash([]);if(s.dot)P.forEach(p=>{g.beginPath();g.arc(p[0],p[1],s.dot,0,7);g.fill()})});
+ (c.marks||[]).forEach(m=>{if(!ok(m.x)||!ok(m.y))return;const x=tx(m.x),y=ty(m.y);g.strokeStyle='#b3261e';g.setLineDash([3,3]);g.lineWidth=1;g.beginPath();g.moveTo(x,Tp+ph);g.lineTo(x,y);g.lineTo(L,y);g.stroke();g.setLineDash([]);g.fillStyle='#b3261e';g.beginPath();g.arc(x,y,4.5,0,7);g.fill();g.font='600 11px system-ui,Arial';g.textAlign=x>L+pw*0.7?'right':'left';g.textBaseline='bottom';g.fillText(m.t,x+(x>L+pw*0.7?-6:6),y-6)});
+ g.restore();
+ let lxp=L+pw-6;g.font='11px system-ui,Arial';g.textBaseline='middle';g.textAlign='right';
+ [...(c.series||[])].reverse().forEach(s=>{if(!s.label)return;g.fillStyle='#222';g.fillText(s.label,lxp,Tp-12);const w=g.measureText(s.label).width;g.strokeStyle=s.col;g.lineWidth=2;g.setLineDash(s.dash||[]);g.beginPath();g.moveTo(lxp-w-24,Tp-12);g.lineTo(lxp-w-6,Tp-12);g.stroke();g.setLineDash([]);lxp-=w+36});
+}
+const SIEVE_TICKS=[0.075,0.15,0.3,0.6,1.18,2.36,4.75,10,20,40,80];
+
+/* =================== specifications =================== */
+const SP={
+ gsb1:{n:'GSB Grading I (MoRTH Table 400-1)',s:[[75,100,100],[53,80,100],[26.5,55,90],[9.5,35,65],[4.75,25,55],[2.36,20,40],[0.425,10,15],[0.075,0,5]]},
+ gsb2:{n:'GSB Grading II (MoRTH Table 400-1)',s:[[53,100,100],[26.5,70,100],[9.5,50,80],[4.75,40,65],[2.36,30,50],[0.425,10,15],[0.075,0,5]]},
+ gsb3:{n:'GSB Grading III (MoRTH Table 400-1)',s:[[53,100,100],[26.5,55,75],[4.75,10,30],[0.075,0,5]]},
+ gsb4:{n:'GSB Grading IV (MoRTH Table 400-1)',s:[[53,100,100],[26.5,50,80],[4.75,15,35],[0.075,0,5]]},
+ gsb5:{n:'GSB Grading V (MoRTH Table 400-1)',s:[[75,100,100],[53,80,100],[26.5,55,90],[9.5,35,65],[4.75,25,50],[2.36,10,20],[0.85,2,10],[0.425,0,5]]},
+ gsb6:{n:'GSB Grading VI (MoRTH Table 400-1)',s:[[53,100,100],[26.5,75,100],[9.5,55,75],[4.75,30,55],[2.36,10,25],[0.425,0,8],[0.075,0,3]]},
+ wmm:{n:'WMM (MoRTH Table 400-13)',s:[[53,100,100],[45,95,100],[22.4,60,80],[11.2,40,60],[4.75,25,40],[2.36,15,30],[0.6,8,22],[0.075,0,5]]},
+ ca40:{n:'40 mm Single-size CA (IS 383 Table 7)',s:[[63,100,100],[40,85,100],[20,0,20],[10,0,5]]},
+ ca20:{n:'20 mm Single-size CA (IS 383 Table 7)',s:[[40,100,100],[20,85,100],[10,0,20],[4.75,0,5]]},
+ ca12:{n:'12.5 mm Single-size CA (IS 383 Table 7)',s:[[16,100,100],[12.5,85,100],[10,0,45],[4.75,0,10]]},
+ ca10:{n:'10 mm Single-size CA (IS 383 Table 7)',s:[[12.5,100,100],[10,85,100],[4.75,0,20],[2.36,0,5]]},
+ ca6:{n:'6 mm Chips (site specification – verify)',s:[[10,100,100],[6.3,85,100],[4.75,0,35],[2.36,0,10]]},
+ g40:{n:'40 mm Graded CA (IS 383)',s:[[80,100,100],[40,95,100],[20,30,70],[10,10,35],[4.75,0,5]]},
+ g20:{n:'20 mm Graded CA (IS 383)',s:[[40,100,100],[20,95,100],[10,25,55],[4.75,0,10]]},
+ g12:{n:'12.5 mm Graded CA (IS 383)',s:[[20,100,100],[12.5,90,100],[10,40,85],[4.75,0,10]]},
+ fa1:{n:'Fine Aggregate Zone I (IS 383 Table 9)',s:[[10,100,100],[4.75,90,100],[2.36,60,95],[1.18,30,70],[0.6,15,34],[0.3,5,20],[0.15,0,10]]},
+ fa2:{n:'Fine Aggregate Zone II (IS 383 Table 9)',s:[[10,100,100],[4.75,90,100],[2.36,75,100],[1.18,55,90],[0.6,35,59],[0.3,8,30],[0.15,0,10]]},
+ fa3:{n:'Fine Aggregate Zone III (IS 383 Table 9)',s:[[10,100,100],[4.75,90,100],[2.36,85,100],[1.18,75,100],[0.6,60,79],[0.3,12,40],[0.15,0,10]]},
+ fa4:{n:'Fine Aggregate Zone IV (IS 383 Table 9)',s:[[10,100,100],[4.75,95,100],[2.36,95,100],[1.18,90,100],[0.6,80,100],[0.3,15,50],[0.15,0,15]]},
+ bm1:{n:'BM Grading 1 – 40 mm (MoRTH 504)',s:[[45,100,100],[37.5,90,100],[26.5,75,100],[13.2,35,61],[4.75,13,22],[2.36,4,19],[0.3,2,10],[0.075,0,8]]},
+ bm2:{n:'BM Grading 2 – 19 mm (MoRTH 504)',s:[[26.5,100,100],[19,90,100],[13.2,56,88],[4.75,16,36],[2.36,4,19],[0.3,2,10],[0.075,0,8]]},
+ dbm1:{n:'DBM Grading 1 – 37.5 mm (MoRTH 505)',s:[[45,100,100],[37.5,95,100],[26.5,63,93],[13.2,55,75],[4.75,38,54],[2.36,28,42],[0.3,7,21],[0.075,2,8]]},
+ dbm2:{n:'DBM Grading 2 – 26.5 mm (MoRTH 505)',s:[[37.5,100,100],[26.5,90,100],[19,71,95],[13.2,56,80],[4.75,38,54],[2.36,28,42],[0.3,7,21],[0.075,2,8]]},
+ bc1:{n:'BC Grading 1 – 19 mm (MoRTH 507)',s:[[26.5,100,100],[19,90,100],[13.2,59,79],[9.5,52,72],[4.75,35,55],[2.36,28,44],[1.18,20,34],[0.6,15,27],[0.3,10,20],[0.15,5,13],[0.075,2,8]]},
+ bc2:{n:'BC Grading 2 – 13.2 mm (MoRTH 507)',s:[[19,100,100],[13.2,90,100],[9.5,70,88],[4.75,53,71],[2.36,42,58],[1.18,34,48],[0.6,26,38],[0.3,18,28],[0.15,12,20],[0.075,4,10]]},
+ custom:{n:'Custom / Other (enter your own limits)',s:[[63],[40],[20],[10],[4.75],[2.36],[0.6],[0.3],[0.075]]}
+};
+const specOpts=()=>Object.entries(SP).map(([k,v])=>[k,v.n]);
+const specRows=(k,old=[])=>SP[k].s.map(([s,lo,hi])=>{const o=old.find(r=>num(r.s)===s);return{s:String(s),w:o?o.w:'',lo:lo??'',hi:hi??''}});
+
+/* =================== SIEVE ANALYSIS =================== */
+function sieveMod(id,title,rt,spec){reg({id,g:'Sieve Analysis',title,rt,std:'IS 2386 (Part 1) : 1963 / IS 383 : 2016 / MoRTH 5th Rev.',
+ init:()=>({spec,total:'',washed:'',rows:[...specRows(spec),{s:'Pan',w:'',lo:'',hi:''}]}),
+ blank:()=>({s:'',w:'',lo:'',hi:''}),
+ view:d=>`<div class="frow">${F('Specification / Grading',SEL('spec',d.spec,specOpts()))}${F('Total dry wt. of sample W (g)',N('total',d.total,{ph:'blank = sum of retained'}))}${F('Dry wt. after washing on 75µ (g)',N('washed',d.washed))}${O('Sum of wt. retained','sum','g')}${O('Loss / (gain) in sieving','loss','%')}${O('Fineness modulus','fm')}</div>`
+  +T('rows',[{k:'s',h:'IS Sieve<br>(mm)',t:'txt'},{k:'w',h:'Wt. retained<br>(g)'},{k:'cw',h:'Cum. wt.<br>retained (g)',t:'o'},{k:'pr',h:'% Wt.<br>retained',t:'o'},{k:'cr',h:'Cum. %<br>retained',t:'o'},{k:'pp',h:'% Passing',t:'o'},{k:'lo',h:'Spec. lower<br>limit (%)'},{k:'hi',h:'Spec. upper<br>limit (%)'},{k:'st',h:'Remarks',t:'o'}],d.rows,{sn:'S.No'})
+  +`<p class="note np">Limits are pre-filled from the selected specification and are fully editable. Changing the specification keeps weights for matching sieves.</p><div class="fld out" data-zone style="display:none"><span>Zone (IS 383) conforming</span><b data-o="zone"></b></div><canvas class="ch" data-ch="1"></canvas>`,
+ onChange(k,d){if(k==='spec'){const pan=d.rows.find(r=>String(r.s).toLowerCase()==='pan');d.rows=[...specRows(d.spec,d.rows),pan||{s:'Pan',w:'',lo:'',hi:''}];return true}},
+ calc(d){const o={};const sum=d.rows.reduce((a,r)=>a+(num(r.w)||0),0);const W=num(d.total)>0?num(d.total):sum;o.sum=f(sum,1);
+  o.loss=num(d.total)>0&&sum?f((num(d.total)-sum)/num(d.total)*100,2):'';
+  let cum=0,pass=true,any=false;const pts=[],lo=[],hi=[],cr={};
+  d.rows.forEach((r,i)=>{const p=`rows.${i}.`,w=num(r.w)||0;cum+=w;if(!W){return}const c=cum/W*100;o[p+'cw']=f(cum,1);o[p+'pr']=ok(num(r.w))?f(w/W*100,2):'';o[p+'cr']=f(c,2);const s=num(r.s);if(!ok(s))return;cr[s]=c;const pp=Math.max(0,100-c);o[p+'pp']=f(pp,2);pts.push([s,pp]);const L=num(r.lo),H=num(r.hi);if(ok(L))lo.push([s,L]);if(ok(H))hi.push([s,H]);const b=lim(+pp.toFixed(2),L,H);if(b!==null&&sum>0){o[p+'st']=b?'PASS':'FAIL';any=true;pass&&=b}});
+  if(!W){d.rows.forEach((r,i)=>{if(ok(num(r.lo)))lo.push([num(r.s),num(r.lo)]);if(ok(num(r.hi)))hi.push([num(r.s),num(r.hi)])})}
+  const STD=[80,40,20,10,4.75,2.36,1.18,0.6,0.3,0.15];let fm=0,nfm=0;STD.forEach(s=>{if(cr[s]!==undefined){fm+=cr[s];nfm++}});o.fm=nfm>=4&&sum?f(fm/100,2):'';
+  if(d.spec.startsWith('fa')&&sum){const z=['fa1','fa2','fa3','fa4'].filter(k=>SP[k].s.every(([s,L,H])=>{const q=pts.find(p=>p[0]===s);return!q||(q[1]>=L-1e-9&&q[1]<=H+1e-9)})).map(k=>'Zone '+['I','II','III','IV'][+k[2]-1]);o.zone=z.length?z.join(', '):'None';}
+  o.__result=!any?{s:'na',t:'Enter weights retained on each sieve to evaluate gradation.'}:pass?{s:'ok',t:`Gradation CONFORMS to ${SP[d.spec].n}`}:{s:'bad',t:`Gradation DOES NOT CONFORM to ${SP[d.spec].n}`};
+  o._g={pts,lo,hi};return o},
+ draw(d,o,root){const z=$('[data-zone]',root);if(z)z.style.display=d.spec.startsWith('fa')?'':'none';const cv=$('canvas[data-ch]',root);if(!cv)return;const{pts,lo,hi}=o._g;const xs=[...pts,...lo,...hi].map(p=>p[0]).filter(v=>v>0);const x0=xs.length?Math.min(...xs)/1.6:0.05,x1=xs.length?Math.max(...xs)*1.5:100;const sorted=a=>[...a].sort((p,q)=>p[0]-q[0]);
+  chart(cv,{title:'Gradation curve',xlog:1,x0,x1,y0:0,y1:100,xt:[...new Set([...SIEVE_TICKS,...xs])].sort((a,b)=>a-b),xl:'IS Sieve size (mm) – log scale',yl:'% Passing',yf:v=>v.toFixed(0),series:[{pts:sorted(lo),col:'#c0392b',dash:[6,4],w:1.5,label:'Lower limit'},{pts:sorted(hi),col:'#1e7b3a',dash:[6,4],w:1.5,label:'Upper limit'},{pts:sorted(pts),col:'#0b5cad',w:2.4,dot:3.5,label:'Test result'}]})}
+})}
+sieveMod('sv_gsb','GSB – Sieve Analysis','Gradation of Granular Sub-Base (GSB)','gsb1');
+sieveMod('sv_wmm','WMM – Sieve Analysis','Gradation of Wet Mix Macadam (WMM)','wmm');
+sieveMod('sv_40','40 mm Aggregate','Sieve Analysis of 40 mm Coarse Aggregate','ca40');
+sieveMod('sv_20','20 mm Aggregate','Sieve Analysis of 20 mm Coarse Aggregate','ca20');
+sieveMod('sv_12','12 mm Aggregate','Sieve Analysis of 12.5 mm Coarse Aggregate','ca12');
+sieveMod('sv_10','10 mm Aggregate','Sieve Analysis of 10 mm Coarse Aggregate','ca10');
+sieveMod('sv_6','6 mm Aggregate','Sieve Analysis of 6 mm Aggregate','ca6');
+sieveMod('sv_fa','Fine Aggregate / Sand','Sieve Analysis of Fine Aggregate (Sand)','fa2');
+sieveMod('sv_bm','BM – Gradation','Gradation of Bituminous Macadam (BM)','bm2');
+sieveMod('sv_dbm','DBM – Gradation','Gradation of Dense Bituminous Macadam (DBM)','dbm2');
+sieveMod('sv_bc','BC – Gradation','Gradation of Bituminous Concrete (BC)','bc1');
+sieveMod('sv_cus','Other / Custom Sieve','Sieve Analysis','custom');
+
+/* =================== SOIL & EARTHWORK =================== */
+reg({id:'proctor',g:'Soil & Earthwork',title:'Compaction (Proctor) – MDD/OMC',rt:'Laboratory Compaction Test – MDD & OMC',std:'IS 2720 (Part 7) : 1980 / IS 2720 (Part 8) : 1983',
+ init:()=>({type:'light',V:'1000',Wm:'',G:'2.65',rows:rep(5,()=>({wa:'',wms:'',cn:'',wc:'',ww:'',wd:''}))}),
+ blank:()=>({wa:'',wms:'',cn:'',wc:'',ww:'',wd:''}),
+ view:d=>`<div class="frow">${F('Compaction type',SEL('type',d.type,[['light','Light – 2.6 kg rammer, 3 layers (Pt 7)'],['heavy','Heavy – 4.9 kg rammer, 5 layers (Pt 8)']]))}${F('Volume of mould V (cc)',N('V',d.V))}${F('Wt. of empty mould (g)',N('Wm',d.Wm))}${F('Specific gravity G (for ZAV line)',N('G',d.G))}</div>`
+  +T('rows',[{k:'wa',h:'Water<br>added (%)'},{k:'wms',h:'Wt. mould +<br>wet soil (g)'},{k:'ws',h:'Wt. of wet<br>soil (g)',t:'o'},{k:'bd',h:'Bulk density<br>(g/cc)',t:'o'},{k:'cn',h:'Container<br>No.',t:'txt'},{k:'wc',h:'Wt. of<br>container (g)'},{k:'ww',h:'Cont. + wet<br>soil (g)'},{k:'wd',h:'Cont. + dry<br>soil (g)'},{k:'mc',h:'Moisture<br>content (%)',t:'o'},{k:'dd',h:'Dry density<br>(g/cc)',t:'o'}],d.rows,{sn:'Trial'})
+  +`<div class="frow res">${O('Maximum Dry Density (MDD)','mdd','g/cc')}${O('Optimum Moisture Content (OMC)','omc','%')}</div><canvas class="ch" data-ch="1"></canvas>`,
+ onChange(k,d){if(k==='type'){d.V=d.type==='heavy'?'2250':'1000';return true}},
+ calc(d){const o={},V=num(d.V),Wm=num(d.Wm),pts=[];
+  d.rows.forEach((r,i)=>{const p=`rows.${i}.`,ws=num(r.wms)-Wm,bd=ws/V,dry=num(r.wd)-num(r.wc),mc=(num(r.ww)-num(r.wd))/dry*100,dd=bd/(1+mc/100);o[p+'ws']=f(ws,1);o[p+'bd']=f(bd,3);o[p+'mc']=f(mc,2);o[p+'dd']=f(dd,3);if(ok(mc)&&ok(dd))pts.push([mc,dd])});
+  const pk=peak(pts);d.out=pk;o.mdd=pk?f(pk[1],3):'';o.omc=pk?f(pk[0],2):'';o._pts=pts;o._pk=pk;
+  o.__result=pk?{s:'ok',t:`Maximum Dry Density = ${f(pk[1],3)} g/cc   |   Optimum Moisture Content = ${f(pk[0],2)} %`}:{s:'na',t:'Enter at least 3 trials to determine MDD and OMC.'};return o},
+ draw(d,o,root){const cv=$('canvas[data-ch]',root),pts=[...o._pts].sort((a,b)=>a[0]-b[0]),pk=o._pk,G=num(d.G);if(!cv)return;
+  const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]);const x0=xs.length?Math.floor(Math.min(...xs)-1):0,x1=xs.length?Math.ceil(Math.max(...xs)+1):20,y0=ys.length?Math.floor((Math.min(...ys)-0.04)*20)/20:1.6,y1=ys.length?Math.ceil((Math.max(...ys)+0.04)*20)/20:2.2;
+  const curve=pk?[...pts.filter(p=>p[0]<pk[0]),pk,...pts.filter(p=>p[0]>pk[0])]:pts;const zav=ok(G)?rep(30,(_,i)=>{const w=x0+(x1-x0)*i/29;return[w,G/(1+w*G/100)]}):[];
+  chart(cv,{title:'Dry density vs moisture content',x0,x1,y0,y1,xl:'Moisture content (%)',yl:'Dry density (g/cc)',yf:v=>v.toFixed(2),xf:v=>v.toFixed(1),series:[{pts:zav,col:'#8e44ad',dash:[5,4],w:1.4,label:'Zero air voids'},{pts:curve,col:'#0b5cad',smooth:1,w:2.4,label:'Compaction curve'},{pts,col:'#0b5cad',line:false,dot:4}],marks:pk?[{x:pk[0],y:pk[1],t:`MDD ${f(pk[1],3)} @ OMC ${f(pk[0],2)}%`}]:[]})}
+});
+
+function pullProctor(d){const p=S.tests.proctor?.out;if(!p){toast('No Proctor result yet — complete the Compaction tab first');return false}d.mdd=f(p[1],3);if('omc'in d)d.omc=f(p[0],2);toast('MDD/OMC taken from Proctor test');return true}
+
+reg({id:'sandrep',g:'Soil & Earthwork',title:'Sand Replacement (FDD)',rt:'Field Dry Density by Sand Replacement Method',std:'IS 2720 (Part 28) : 1974',
+ init:()=>({V:'',W1:'',W3:'',W2:'',mdd:'',omc:'',req:'98',rows:rep(3,()=>({ch:'',off:'',W1:'',W4:'',Ww:'',mc:''}))}),
+ blank:()=>({ch:'',off:'',W1:'',W4:'',Ww:'',mc:''}),
+ view:d=>`<h3>A. Calibration of sand-pouring cylinder</h3><div class="frow">${F('Volume of calibrating container V (cc)',N('V',d.V))}${F('Wt. cylinder + sand before pouring W1 (g)',N('W1',d.W1))}${F('Wt. cylinder + sand after pouring in container W3 (g)',N('W3',d.W3))}${F('Wt. of sand in cone W2 (g)',N('W2',d.W2))}${O('Sand in container Wa = W1−W3−W2','Wa','g')}${O('Bulk density of sand γs = Wa / V','gs','g/cc')}</div>
+  <h3>B. Reference laboratory values</h3><div class="frow">${F('Lab MDD (g/cc)',N('mdd',d.mdd))}${F('OMC (%)',N('omc',d.omc))}${F('Required degree of compaction (%)',N('req',d.req))}<div class="fld np"><span>&nbsp;</span><button class="btn" data-act="pull">↺ Use Proctor result</button></div></div>
+  <h3>C. Field density determination</h3>`
+  +T('rows',[{k:'ch',h:'Chainage /<br>Location',t:'txt'},{k:'off',h:'Offset /<br>Side',t:'txt'},{k:'W1',h:'Wt. cyl. + sand<br>before (g)'},{k:'W4',h:'Wt. cyl. + sand<br>after (g)'},{k:'Wb',h:'Sand in hole<br>(g)',t:'o'},{k:'Vh',h:'Vol. of hole<br>(cc)',t:'o'},{k:'Ww',h:'Wt. of wet soil<br>from hole (g)'},{k:'bd',h:'Bulk density<br>(g/cc)',t:'o'},{k:'mc',h:'Moisture<br>content (%)'},{k:'dd',h:'Dry density<br>(g/cc)',t:'o'},{k:'pc',h:'Degree of<br>compaction (%)',t:'o'},{k:'st',h:'Remarks',t:'o'}],d.rows,{sn:'S.No'}),
+ act(a,d){if(a==='pull')return pullProctor(d)},
+ calc(d){const o={},Wa=num(d.W1)-num(d.W3)-num(d.W2),gs=Wa/num(d.V),mdd=num(d.mdd),req=num(d.req);o.Wa=f(Wa,1);o.gs=f(gs,3);let all=true,n=0;
+  d.rows.forEach((r,i)=>{const p=`rows.${i}.`,Wb=num(r.W1)-num(r.W4)-num(d.W2),Vh=Wb/gs,bd=num(r.Ww)/Vh,dd=bd/(1+num(r.mc)/100),pc=dd/mdd*100;o[p+'Wb']=f(Wb,1);o[p+'Vh']=f(Vh,1);o[p+'bd']=f(bd,3);o[p+'dd']=f(dd,3);o[p+'pc']=f(pc,2);const b=lim(pc,req);if(b!==null){o[p+'st']=stat(b);all&&=b;n++}});
+  o.__result=!n?{s:'na',t:'Complete calibration, MDD and field readings.'}:all?{s:'ok',t:`All ${n} location(s) achieve ≥ ${req}% of MDD — ACCEPTED`}:{s:'bad',t:`One or more locations below ${req}% of MDD — NOT ACCEPTED (re-compact and retest)`};return o}
+});
+
+reg({id:'corecut',g:'Soil & Earthwork',title:'Core Cutter (FDD)',rt:'Field Dry Density by Core Cutter Method',std:'IS 2720 (Part 29) : 1975',
+ init:()=>({D:'100',H:'127.3',Wc:'',mdd:'',req:'98',rows:rep(3,()=>({ch:'',lay:'',Wcs:'',mc:''}))}),
+ blank:()=>({ch:'',lay:'',Wcs:'',mc:''}),
+ view:d=>`<div class="frow">${F('Internal dia. of cutter (mm)',N('D',d.D))}${F('Height of cutter (mm)',N('H',d.H))}${O('Volume of cutter','V','cc')}${F('Wt. of empty cutter (g)',N('Wc',d.Wc))}${F('Lab MDD (g/cc)',N('mdd',d.mdd))}${F('Required compaction (%)',N('req',d.req))}<div class="fld np"><span>&nbsp;</span><button class="btn" data-act="pull">↺ Use Proctor MDD</button></div></div>`
+  +T('rows',[{k:'ch',h:'Chainage /<br>Location',t:'txt'},{k:'lay',h:'Layer /<br>Offset',t:'txt'},{k:'Wcs',h:'Wt. cutter +<br>soil (g)'},{k:'Ws',h:'Wt. of wet<br>soil (g)',t:'o'},{k:'bd',h:'Bulk density<br>(g/cc)',t:'o'},{k:'mc',h:'Moisture<br>content (%)'},{k:'dd',h:'Dry density<br>(g/cc)',t:'o'},{k:'pc',h:'Degree of<br>compaction (%)',t:'o'},{k:'st',h:'Remarks',t:'o'}],d.rows,{sn:'S.No'}),
+ act(a,d){if(a==='pull')return pullProctor(d)},
+ calc(d){const o={},V=Math.PI/4*num(d.D)**2*num(d.H)/1000,mdd=num(d.mdd),req=num(d.req);o.V=f(V,1);let all=true,n=0;
+  d.rows.forEach((r,i)=>{const p=`rows.${i}.`,Ws=num(r.Wcs)-num(d.Wc),bd=Ws/V,dd=bd/(1+num(r.mc)/100),pc=dd/mdd*100;o[p+'Ws']=f(Ws,1);o[p+'bd']=f(bd,3);o[p+'dd']=f(dd,3);o[p+'pc']=f(pc,2);const b=lim(pc,req);if(b!==null){o[p+'st']=stat(b);all&&=b;n++}});
+  o.__result=!n?{s:'na',t:'Enter cutter details, MDD and field readings.'}:all?{s:'ok',t:`All ${n} location(s) achieve ≥ ${req}% of MDD — ACCEPTED`}:{s:'bad',t:`One or more locations below ${req}% of MDD — NOT ACCEPTED`};return o}
+});
+
+reg({id:'atter',g:'Soil & Earthwork',title:'Atterberg Limits (LL/PL/PI)',rt:'Determination of Liquid Limit, Plastic Limit & Plasticity Index',std:'IS 2720 (Part 5) : 1985',
+ init:()=>({llmax:'25',pimax:'6',np:'no',ll:rep(4,()=>({n:'',cn:'',wc:'',ww:'',wd:''})),pl:rep(2,()=>({cn:'',wc:'',ww:'',wd:''}))}),
+ blank:l=>l==='ll'?{n:'',cn:'',wc:'',ww:'',wd:''}:{cn:'',wc:'',ww:'',wd:''},
+ view:d=>`<div class="frow">${F('Max. permissible LL (%)',N('llmax',d.llmax))}${F('Max. permissible PI (%)',N('pimax',d.pimax))}${F('Plastic limit not obtainable (Non-Plastic)?',SEL('np',d.np,[['no','No'],['yes','Yes – NP']]))}</div><h3>A. Liquid limit (Casagrande)</h3>`
+  +T('ll',[{k:'n',h:'No. of<br>blows'},{k:'cn',h:'Container<br>No.',t:'txt'},{k:'wc',h:'Wt. container<br>(g)'},{k:'ww',h:'Cont. + wet<br>soil (g)'},{k:'wd',h:'Cont. + dry<br>soil (g)'},{k:'mc',h:'Moisture<br>content (%)',t:'o'}],d.ll,{sn:'Trial'})
+  +`<h3>B. Plastic limit</h3>`+T('pl',[{k:'cn',h:'Container No.',t:'txt'},{k:'wc',h:'Wt. container (g)'},{k:'ww',h:'Cont. + wet soil (g)'},{k:'wd',h:'Cont. + dry soil (g)'},{k:'mc',h:'Moisture content (%)',t:'o'}],d.pl,{sn:'Trial'})
+  +`<div class="frow res">${O('Liquid limit LL','LL','%')}${O('Plastic limit PL','PL','%')}${O('Plasticity index PI','PI','%')}${O('Flow index','FI')}</div><canvas class="ch" data-ch="1"></canvas>`,
+ calc(d){const o={},mc=r=>(num(r.ww)-num(r.wd))/(num(r.wd)-num(r.wc))*100,pts=[];
+  d.ll.forEach((r,i)=>{const m=mc(r);o[`ll.${i}.mc`]=f(m,2);if(ok(m)&&num(r.n)>0)pts.push([num(r.n),m])});
+  const pls=d.pl.map((r,i)=>{const m=mc(r);o[`pl.${i}.mc`]=f(m,2);return m});
+  let LL=NaN,fi=NaN;if(pts.length>=2){const q=linFit(pts.map(p=>[Math.log10(p[0]),p[1]]));if(q){LL=q[0]*Math.log10(25)+q[1];fi=-q[0]}}else if(pts.length===1){LL=pts[0][1]*(pts[0][0]/25)**0.121}
+  const PL=d.np==='yes'?NaN:avg(pls),PI=LL-PL;o.LL=f(LL,1);o.PL=d.np==='yes'?'NP':f(PL,1);o.PI=d.np==='yes'?'NP':f(PI,1);o.FI=f(fi,2);o._pts=pts;o._LL=LL;
+  if(!ok(LL))o.__result={s:'na',t:'Enter liquid limit trials (minimum 2 recommended, 15–35 blows).'};else{const bl=lim(LL,null,num(d.llmax)),bp=d.np==='yes'?true:lim(PI,null,num(d.pimax));const good=bl!==false&&bp!==false;o.__result={s:good?'ok':'bad',t:`LL = ${f(LL,1)}%, PL = ${o.PL}${d.np==='yes'?'':'%'}, PI = ${o.PI}${d.np==='yes'?'':'%'} — ${good?'WITHIN':'EXCEEDS'} specified limits (LL ≤ ${d.llmax}%, PI ≤ ${d.pimax}%)`}}return o},
+ draw(d,o,root){const cv=$('canvas[data-ch]',root);if(!cv)return;const pts=[...o._pts].sort((a,b)=>a[0]-b[0]);const ys=pts.map(p=>p[1]);const q=pts.length>=2?linFit(pts.map(p=>[Math.log10(p[0]),p[1]])):null;const line=q?[10,15,20,25,30,40,50].map(n=>[n,q[0]*Math.log10(n)+q[1]]):[];const y0=ys.length?Math.floor(Math.min(...ys)-5):0,y1=ys.length?Math.ceil(Math.max(...ys)+5):60;
+  chart(cv,{title:'Flow curve',xlog:1,x0:10,x1:60,y0,y1,xt:[10,15,20,25,30,40,50,60],xl:'Number of blows (log scale)',yl:'Moisture content (%)',yf:v=>v.toFixed(0),series:[{pts:line,col:'#0b5cad',w:2,label:'Flow curve'},{pts,col:'#0b5cad',line:false,dot:4}],marks:ok(o._LL)?[{x:25,y:o._LL,t:`LL = ${f(o._LL,1)}%`}]:[]})}
+});
+
+reg({id:'cbr',g:'Soil & Earthwork',title:'CBR Test',rt:'California Bearing Ratio (CBR) Test',std:'IS 2720 (Part 16) : 1987',
+ init:()=>({unit:'kg',prf:'',cond:'Soaked (4 days)',surch:'5',dd:'',mc:'',req:'',rows:[0,0.5,1,1.5,2,2.5,3,4,5,7.5,10,12.5].map(p=>({pen:String(p),div:''}))}),
+ blank:()=>({pen:'',div:''}),
+ view:d=>`<div class="frow">${F('Load unit',SEL('unit',d.unit,[['kg','kg'],['kN','kN']]))}${F('Proving ring constant (unit/division)',N('prf',d.prf))}${F('Condition',SEL('cond',d.cond,['Soaked (4 days)','Unsoaked']))}${F('Surcharge (kg)',N('surch',d.surch))}${F('Moulded dry density (g/cc)',N('dd',d.dd))}${F('Moulding moisture (%)',N('mc',d.mc))}${F('Minimum CBR required (%)',N('req',d.req))}</div>`
+  +T('rows',[{k:'pen',h:'Penetration (mm)'},{k:'div',h:'Proving ring reading (div.)'},{k:'ld',h:'Load',t:'o'}],d.rows,{sn:'S.No'})
+  +`<div class="frow res">${O('Load at 2.5 mm','l25')}${O('CBR at 2.5 mm','c25','%')}${O('Load at 5.0 mm','l5')}${O('CBR at 5.0 mm','c5','%')}${O('CBR value adopted','cbr','%')}</div><p class="note">Standard loads: 1370 kg (13.44 kN) at 2.5 mm and 2055 kg (20.16 kN) at 5.0 mm. Higher value adopted; if CBR at 5 mm is consistently higher, adopt it after repeat test.</p><canvas class="ch" data-ch="1"></canvas>`,
+ calc(d){const o={},k=num(d.prf),pts=[];d.rows.forEach((r,i)=>{const L=num(r.div)*k;o[`rows.${i}.ld`]=f(L,d.unit==='kN'?3:1);if(ok(L)&&ok(num(r.pen)))pts.push([num(r.pen),L])});pts.sort((a,b)=>a[0]-b[0]);
+  const s25=d.unit==='kN'?13.44:1370,s5=d.unit==='kN'?20.16:2055;const l25=pts.length>1?interp(pts,2.5):NaN,l5=pts.length>1?interp(pts,5):NaN,c25=l25/s25*100,c5=l5/s5*100,cbr=ok(c25)&&ok(c5)?Math.max(c25,c5):c25;
+  o.l25=ok(l25)?f(l25,2)+' '+d.unit:'';o.l5=ok(l5)?f(l5,2)+' '+d.unit:'';o.c25=f(c25,2);o.c5=f(c5,2);o.cbr=f(cbr,2);o._pts=pts;o._u=d.unit;
+  const b=lim(cbr,num(d.req));o.__result=!ok(cbr)?{s:'na',t:'Enter proving ring constant and readings.'}:{s:b===false?'bad':'ok',t:`CBR (${d.cond}) = ${f(cbr,2)} %`+(b===null?'':b?` — MEETS minimum ${d.req}%`:` — BELOW minimum ${d.req}%`)};return o},
+ draw(d,o,root){const cv=$('canvas[data-ch]',root);if(!cv)return;const pts=o._pts,ys=pts.map(p=>p[1]);chart(cv,{title:'Load – penetration curve',x0:0,x1:13,y0:0,y1:ys.length?Math.max(...ys)*1.15||1:100,xt:[0,1,2,2.5,3,4,5,6,7.5,10,12.5],xl:'Penetration (mm)',yl:'Load ('+o._u+')',yf:v=>v>=10?v.toFixed(0):v.toFixed(2),series:[{pts,col:'#0b5cad',smooth:1,dot:3.5,w:2.2,label:'Test'}]})}
+});
+
+/* =================== CONCRETE =================== */
+reg({id:'cube',g:'Concrete',title:'Cube Compressive Strength',rt:'Compressive Strength of Concrete Cubes',std:'IS 516 (Part 1/Sec 1) : 2021 / IS 456 : 2000',
+ init:()=>({fck:'25',size:'150',cast:'',test:today(),age:'',slump:'',reqMean:'',reqMin:'',rows:rep(3,(_,i)=>({id:String(i+1),wt:'',load:''}))}),
+ blank:()=>({id:'',wt:'',load:''}),
+ view:d=>`<div class="frow">${F('Grade of concrete',SEL('fck',d.fck,GRADES))}${F('Cube size (mm)',SEL('size',d.size,[['150','150 × 150 × 150'],['100','100 × 100 × 100'],['70.6','70.6 (mortar)']]))}${F('Date of casting',I('cast',d.cast,{t:'date'}))}${F('Date of testing',I('test',d.test,{t:'date'}))}${F('Age (days)',N('age',d.age,{ph:'auto from dates'}))}${F('Slump at site (mm)',N('slump',d.slump))}${F('Required avg. strength (N/mm²)',N('reqMean',d.reqMean,{ph:'auto'}))}${F('Min. individual (N/mm²)',N('reqMin',d.reqMin,{ph:'auto'}))}</div>`
+  +T('rows',[{k:'id',h:'Cube ID /<br>Mark',t:'txt'},{k:'wt',h:'Weight<br>(kg)'},{k:'den',h:'Density<br>(kg/m³)',t:'o'},{k:'load',h:'Crushing<br>load (kN)'},{k:'str',h:'Compressive<br>strength (N/mm²)',t:'o'},{k:'dev',h:'Deviation<br>from avg (%)',t:'o'},{k:'st',h:'Remarks',t:'o'}],d.rows,{sn:'S.No'})
+  +`<div class="frow res">${O('Age of specimen','agec','days')}${O('Average compressive strength','avg','N/mm²')}${O('Required at this age','exp','N/mm²')}${O('% of characteristic strength','pct','%')}${O('Average density','den','kg/m³')}</div><p class="note">Auto requirement: 28 days ≥ fck (mean) and individual ≥ fck − 4 N/mm² (M20 & above) / fck − 3 (below M20) per IS 456 Table 11 — over-type with project criteria if different. Early ages use indicative % of fck (3 d ≈ 40%, 7 d ≈ 65%, 14 d ≈ 90%). Individual results differing by more than ±15% of the average are flagged per IS 516.</p>`,
+ calc(d){const o={},fck=num(d.fck),sz=num(d.size),A=sz*sz;let age=num(d.age);if(!ok(age)&&d.cast&&d.test)age=Math.round((new Date(d.test)-new Date(d.cast))/864e5);o.agec=ok(age)?String(age):'';
+  const st=d.rows.map(r=>num(r.load)*1000/A),dn=d.rows.map(r=>num(r.wt)/(sz/1000)**3);const a=avg(st),ad=avg(dn);
+  const ep=ok(age)?(age>=28?100:interp([[0,0],[3,40],[7,65],[14,90],[28,100]],age)):100;const req=ok(num(d.reqMean))?num(d.reqMean):fck*ep/100;const rmin=ok(num(d.reqMin))?num(d.reqMin):(ok(age)&&age<28?NaN:fck-(fck>=20?4:3));
+  let all=true,var15=false;d.rows.forEach((r,i)=>{const p=`rows.${i}.`;o[p+'den']=f(dn[i],0);o[p+'str']=f(st[i],2);const dv=(st[i]-a)/a*100;o[p+'dev']=ok(dv)?(dv>0?'+':'')+f(dv,1):'';if(ok(dv)&&Math.abs(dv)>15)var15=true;const b=lim(st[i],rmin);if(b!==null){o[p+'st']=stat(b);all&&=b}});
+  o.avg=f(a,2);o.exp=f(req,2);o.pct=f(a/fck*100,1);o.den=f(ad,0);
+  o.__result=!ok(a)?{s:'na',t:'Enter crushing loads.'}:(a>=req-1e-9&&all)?{s:'ok',t:`Average strength ${f(a,2)} N/mm² at ${ok(age)?age+' days':'—'} ≥ required ${f(req,2)} N/mm² — SATISFACTORY for M${fck}${var15?' (note: individual variation > ±15% of average)':''}`}:{s:'bad',t:`Average strength ${f(a,2)} N/mm² — DOES NOT SATISFY requirement (${f(req,2)} N/mm²) for M${fck}${var15?' (individual variation > ±15%)':''}`};return o}
+});
+
+reg({id:'ccore',g:'Concrete',title:'Concrete Core Test',rt:'Compressive Strength of Drilled Concrete Cores',std:'IS 516 (Part 4) : 2018 / IS 456 : 2000 cl. 17.4',
+ init:()=>({fck:'25',rows:rep(3,(_,i)=>({id:'C'+(i+1),loc:'',dia:'',len:'',load:''}))}),
+ blank:()=>({id:'',loc:'',dia:'',len:'',load:''}),
+ view:d=>`<div class="frow">${F('Grade of concrete',SEL('fck',d.fck,GRADES))}</div>`+T('rows',[{k:'id',h:'Core<br>ID',t:'txt'},{k:'loc',h:'Location /<br>Member',t:'txt',l:1},{k:'dia',h:'Dia.<br>(mm)'},{k:'len',h:'Length after<br>capping (mm)'},{k:'ld',h:'L/D',t:'o'},{k:'load',h:'Max. load<br>(kN)'},{k:'cs',h:'Core strength<br>(N/mm²)',t:'o'},{k:'cf',h:'L/D correction<br>factor',t:'o'},{k:'cy',h:'Corrected cyl.<br>strength',t:'o'},{k:'eq',h:'Equivalent cube<br>strength (N/mm²)',t:'o'},{k:'st',h:'Remarks',t:'o'}],d.rows,{sn:'S.No'})
+  +`<div class="frow res">${O('Average equivalent cube strength','avg','N/mm²')}${O('0.85 fck (avg. criterion)','c85','N/mm²')}${O('0.75 fck (individual criterion)','c75','N/mm²')}</div><p class="note">Correction factor f = 0.11·(L/D) + 0.78 for 1 ≤ L/D ≤ 2 (IS 516 Pt 4). Equivalent cube strength = 1.25 × corrected cylinder strength. Acceptance (IS 456 cl. 17.4.3): average ≥ 0.85 fck and no individual core &lt; 0.75 fck.</p>`,
+ calc(d){const o={},fck=num(d.fck),eqs=[];let all=true;
+  d.rows.forEach((r,i)=>{const p=`rows.${i}.`,D=num(r.dia),L=num(r.len),ld=L/D,cs=num(r.load)*1000/(Math.PI/4*D*D),cf=ld>=2?1:0.11*Math.max(1,ld)+0.78,cy=cs*cf,eq=1.25*cy;o[p+'ld']=f(ld,2);o[p+'cs']=f(cs,2);o[p+'cf']=ok(ld)?f(cf,3):'';o[p+'cy']=f(cy,2);o[p+'eq']=f(eq,2);eqs.push(eq);const b=lim(eq,0.75*fck);if(b!==null){o[p+'st']=stat(b);all&&=b}});
+  const a=avg(eqs);o.avg=f(a,2);o.c85=f(0.85*fck,2);o.c75=f(0.75*fck,2);
+  o.__result=!ok(a)?{s:'na',t:'Enter core dimensions and loads.'}:(a>=0.85*fck&&all)?{s:'ok',t:`Average equivalent cube strength ${f(a,2)} N/mm² ≥ 0.85 fck and all cores ≥ 0.75 fck — concrete ACCEPTABLE`}:{s:'bad',t:`Average ${f(a,2)} N/mm² — acceptance criteria of IS 456 cl. 17.4.3 NOT MET`};return o}
+});
+
+const EXPO={mild:['Mild',0.55,300],moderate:['Moderate',0.50,300],severe:['Severe',0.45,320],vsevere:['Very severe',0.45,340],extreme:['Extreme',0.40,360]};
+const WC_CURVE={opc43:[[0.30,52],[0.35,46],[0.40,40.5],[0.45,35.5],[0.50,31],[0.55,27],[0.60,23.5],[0.65,20.5]],opc53:[[0.30,58],[0.35,52],[0.40,46],[0.45,40.5],[0.50,35.5],[0.55,31],[0.60,27],[0.65,23.5]],ppc:[[0.30,50],[0.35,44],[0.40,38.5],[0.45,33.5],[0.50,29],[0.55,25],[0.60,21.5],[0.65,18.5]]};
+const CAF={10:[0.44,0.46,0.48,0.50],20:[0.60,0.62,0.64,0.66],40:[0.69,0.71,0.73,0.75]};
+reg({id:'mixc',g:'Concrete',title:'Concrete Mix Design',rt:'Concrete Mix Proportioning',std:'IS 10262 : 2019 / IS 456 : 2000',
+ init:()=>({fck:'25',cem:'opc53',exp:'moderate',agg:'20',zone:'2',slump:'100',pump:'no',sc:'3.15',sfa:'2.65',sca:'2.74',adm:'0.8',sadm:'1.145',wr:'20',wc:'',split:'60',afa:'1.0',aca:'0.5',mfa:'2.0',mca:'0',vol:'0.05',sd:''}),
+ view:d=>`<h3>A. Stipulations</h3><div class="frow">${F('Grade',SEL('fck',d.fck,GRADES))}${F('Cement type',SEL('cem',d.cem,[['opc43','OPC 43 (IS 269)'],['opc53','OPC 53 (IS 269)'],['ppc','PPC (IS 1489)']]))}${F('Exposure (IS 456 Table 5)',SEL('exp',d.exp,Object.entries(EXPO).map(([k,v])=>[k,v[0]])))}${F('Max. size of aggregate (mm)',SEL('agg',d.agg,['10','20','40']))}${F('Fine aggregate zone',SEL('zone',d.zone,[['1','Zone I'],['2','Zone II'],['3','Zone III'],['4','Zone IV']]))}${F('Workability – slump (mm)',N('slump',d.slump))}${F('Pumpable concrete?',SEL('pump',d.pump,[['no','No'],['yes','Yes (CA −10%)']]))}${F('Standard deviation s (N/mm²)',N('sd',d.sd,{ph:'auto (IS 10262 Table 2)'}))}</div>
+  <h3>B. Material properties</h3><div class="frow">${F('Sp. gravity – cement',N('sc',d.sc))}${F('Sp. gravity – fine agg.',N('sfa',d.sfa))}${F('Sp. gravity – coarse agg.',N('sca',d.sca))}${F('Admixture dosage (% by cement)',N('adm',d.adm))}${F('Sp. gravity – admixture',N('sadm',d.sadm))}${F('Water reduction by admixture (%)',N('wr',d.wr))}${F('CA split: 20 mm share (%)',N('split',d.split))}${F('Water absorption – FA (%)',N('afa',d.afa))}${F('Water absorption – CA (%)',N('aca',d.aca))}${F('Free moisture – FA (%)',N('mfa',d.mfa))}${F('Free moisture – CA (%)',N('mca',d.mca))}${F('Trial batch volume (m³)',N('vol',d.vol))}</div>
+  <h3>C. Design steps</h3><div class="frow">${O("Target mean strength f'ck",'ft','N/mm²')}${O('W/C from strength curve (approx.)','wcs')}${O('Max. W/C for exposure','wce')}${F('Adopted W/C ratio',N('wc',d.wc,{ph:'auto'}))}${O('Water content','w','kg/m³')}${O('Cement content','c','kg/m³')}${O('Vol. fraction of CA','fca')}${O('Entrapped air','air','%')}</div>
+  <h3>D. Mix proportions</h3><div data-oh="tbl"></div><p class="note">Water-cement ratio from strength is an approximation of IS 10262 Fig. 1 and must be confirmed by trial mixes. Quantities in SSD condition; field quantities corrected for absorption and free moisture.</p>`,
+ calc(d){const o={},fck=num(d.fck),ag=d.agg,z=+d.zone-1,E=EXPO[d.exp];
+  const s=ok(num(d.sd))?num(d.sd):(fck<=15?3.5:fck<=25?4:5),X=fck<=15?5:fck<=25?5.5:fck<=60?6.5:8,ft=Math.max(fck+1.65*s,fck+X);o.ft=f(ft,2);
+  const cv=WC_CURVE[d.cem];let wcs=NaN;{const pts=[...cv].sort((a,b)=>a[1]-b[1]).map(p=>[p[1],p[0]]);wcs=interp(pts,ft)}o.wcs=f(wcs,3);o.wce=f(E[1],2);
+  const wc=ok(num(d.wc))?num(d.wc):Math.min(Math.round(wcs*100)/100,E[1]);
+  const base={10:208,20:186,40:165}[ag],sl=num(d.slump);let w=base*(1+0.03*Math.max(0,(ok(sl)?sl:50)-50)/25);w*=1-(num(d.wr)||0)/100;
+  let c=w/wc,note='';if(c<E[2]){c=E[2];note=`Cement raised to minimum ${E[2]} kg/m³ for ${E[0]} exposure. `}if(c>450)note+='Cement exceeds 450 kg/m³ (IS 456 cl. 8.2.4.2) – review. ';
+  const wcEff=w/c;let fca=CAF[ag][z]+(0.5-wcEff)/0.05*0.01;if(d.pump==='yes')fca*=0.9;const air={10:1.5,20:1.0,40:0.8}[ag];
+  o.w=f(w,1);o.c=f(c,1);o.fca=f(fca,3);o.air=f(air,1);
+  const adm=c*(num(d.adm)||0)/100,Vc=c/(num(d.sc)*1000),Vw=w/1000,Va=adm/((num(d.sadm)||1)*1000),Vag=1-air/100-Vc-Vw-Va;
+  const CA=Vag*fca*num(d.sca)*1000,FA=Vag*(1-fca)*num(d.sfa)*1000,sp=(num(d.split)||0)/100;
+  const fFA=FA*(1+((num(d.mfa)||0)-(num(d.afa)||0))/100),fCA=CA*(1+((num(d.mca)||0)-(num(d.aca)||0))/100),fW=w-FA*((num(d.mfa)||0)-(num(d.afa)||0))/100-CA*((num(d.mca)||0)-(num(d.aca)||0))/100;
+  const vol=num(d.vol)||0,bag=50/c;
+  const rows=[['Cement',c,c],['Water (free)',w,fW],['Fine aggregate',FA,fFA],['Coarse aggregate 20 mm',ag==='10'?0:CA*sp,ag==='10'?0:fCA*sp],['Coarse aggregate 10 mm',ag==='10'?CA:CA*(1-sp),ag==='10'?fCA:fCA*(1-sp)],['Chemical admixture',adm,adm]];
+  if(ag==='40'){rows[3][0]='Coarse aggregate 40/20 mm'}
+  const okk=ok(CA)&&ok(FA)&&Vag>0;
+  o.tbl=okk?`<div class="tw"><table class="tb"><thead><tr><th>Material</th><th>SSD qty<br>(kg/m³)</th><th>Field qty<br>(kg/m³)</th><th>Ratio<br>(by wt.)</th><th>Per 50 kg<br>bag (kg)</th><th>Trial batch<br>${f(vol,3)} m³ (kg)</th></tr></thead><tbody>${rows.map(r=>`<tr><td class="l">${r[0]}</td><td>${f(r[1],1)}</td><td>${f(r[2],1)}</td><td>${f(r[1]/c,2)}</td><td>${f(r[2]*bag,1)}</td><td>${f(r[2]*vol,2)}</td></tr>`).join('')}</tbody><tfoot><tr><td class="l">Total / Density</td><td>${f(rows.reduce((a,r)=>a+r[1],0),0)}</td><td>${f(rows.reduce((a,r)=>a+r[2],0),0)}</td><td colspan="3">W/C = ${f(wcEff,3)}  ·  Mix ratio C : FA : CA = 1 : ${f(FA/c,2)} : ${f(CA/c,2)}</td></tr></tfoot></table></div>`:'';
+  o.__result=okk?{s:'ok',t:`M${fck} — Cement ${f(c,0)} kg/m³, W/C ${f(wcEff,2)}, Ratio 1 : ${f(FA/c,2)} : ${f(CA/c,2)} (C:FA:CA). ${note}`}:{s:'na',t:'Check input values.'};return o}
+});
+
+/* =================== PAVEMENT MIX DESIGN (blending) =================== */
+const bRows=(k,old=[])=>SP[k].s.map(([s,lo,hi])=>{const o=old.find(r=>num(r.s)===s);return{s:String(s),v:o?o.v:[],lo:lo??'',hi:hi??''}});
+function blendMod(id,title,spec,mats,kind){reg({id,g:'Pavement Mix Design',title,rt:title.replace(' (JMF)','')+' – Proportioning of Aggregates'+(kind==='bit'?' / Job Mix Formula':''),std:'MoRTH Specifications for Road & Bridge Works, 5th Revision',
+ init:()=>({spec,mats:mats.map((nm,j)=>({nm,p:String(j<mats.length-1?Math.floor(100/mats.length):100-Math.floor(100/mats.length)*(mats.length-1))})),rows:bRows(spec).map(r=>({...r,v:mats.map(()=>'')})),omc:'',mdd:'',nmc:'',evap:'1',obc:'',gmb:''}),
+ view:d=>{const n=d.mats.length;return`<div class="frow">${F('Target specification',SEL('spec',d.spec,specOpts()))}</div><h3>A. Material proportions</h3><div class="tw"><table class="tb"><thead><tr><th>Material</th>${d.mats.map((m,j)=>`<th>${I(`mats.${j}.nm`,m.nm)}</th>`).join('')}<th>Total</th></tr></thead><tbody><tr><td><b>Proportion (%)</b></td>${d.mats.map((m,j)=>`<td>${N(`mats.${j}.p`,m.p)}</td>`).join('')}<td class="o" data-o="ptot"></td></tr></tbody></table></div>
+  <div class="btns np"><button class="btn" data-act="madd">+ Add material</button><button class="btn" data-act="mdel">− Remove last material</button><button class="btn pri" data-act="opt">⚙ Auto-optimise proportions</button></div>
+  <h3>B. Individual & combined gradation (% passing)</h3><div class="tw"><table class="tb"><thead><tr><th>IS Sieve<br>(mm)</th>${d.mats.map((m,j)=>`<th data-o="mh${j}"></th>`).join('')}<th>Combined<br>gradation</th><th>Lower<br>limit</th><th>Upper<br>limit</th><th>Mid-<br>point</th><th>Remarks</th></tr></thead><tbody>${d.rows.map((r,i)=>`<tr><td>${I(`rows.${i}.s`,r.s)}</td>${d.mats.map((m,j)=>`<td>${N(`rows.${i}.v.${j}`,(r.v||[])[j]??'')}</td>`).join('')}<td class="o" data-o="rows.${i}.c"></td><td>${N(`rows.${i}.lo`,r.lo)}</td><td>${N(`rows.${i}.hi`,r.hi)}</td><td class="o" data-o="rows.${i}.m"></td><td class="o" data-o="rows.${i}.st"></td></tr>`).join('')}</tbody></table></div>
+  <p class="note np">Enter % passing of each material (from its sieve analysis). “Auto-optimise” searches for proportions that keep the blend inside the band and closest to mid-point.</p><canvas class="ch" data-ch="1"></canvas>
+  ${kind==='gran'?`<h3>C. Design parameters & plant water</h3><div class="frow">${F('OMC of blend (%)',N('omc',d.omc))}${F('MDD of blend (g/cc)',N('mdd',d.mdd))}${F('Natural moisture of aggregates (%)',N('nmc',d.nmc))}${F('Evaporation allowance (%)',N('evap',d.evap))}${O('Water to add at plant','water','kg/tonne')}</div>`:`<h3>C. Job Mix Formula parameters</h3><div class="frow">${F('Optimum binder content OBC (% by wt. of mix)',N('obc',d.obc))}${F('Marshall bulk density Gmb (g/cc)',N('gmb',d.gmb))}${O('Bitumen per tonne of mix','bit','kg')}${O('Aggregate per tonne of mix','aggt','kg')}</div>`}
+  <div data-oh="qty"></div>`},
+ onChange(k,d){if(k==='spec'){d.rows=bRows(d.spec,d.rows).map(r=>({...r,v:d.mats.map((_,j)=>r.v?.[j]??'')}));return true}},
+ act(a,d){if(a==='madd'){d.mats.push({nm:'Material '+(d.mats.length+1),p:'0'});d.rows.forEach(r=>{r.v=r.v||[];r.v.push('')});return true}
+  if(a==='mdel'){if(d.mats.length<=1)return;d.mats.pop();d.rows.forEach(r=>r.v&&r.v.splice(d.mats.length));return true}
+  if(a==='opt'){const n=d.mats.length,R=d.rows.filter(r=>ok(num(r.lo))||ok(num(r.hi)));if(!R.length||d.mats.some((m,j)=>!d.rows.some(r=>ok(num(r.v?.[j]))))){toast('Enter % passing for every material first');return}
+   const V=R.map(r=>d.mats.map((_,j)=>{const v=num(r.v?.[j]);return ok(v)?v:100})),LO=R.map(r=>ok(num(r.lo))?num(r.lo):0),HI=R.map(r=>ok(num(r.hi))?num(r.hi):100);
+   const step=n<=3?1:n===4?2:5,P=new Array(n).fill(0);let best=null,bv=Infinity;
+   const ev=()=>{let e=0;for(let i=0;i<R.length;i++){let c=0;for(let j=0;j<n;j++)c+=P[j]*V[i][j]/100;const mid=(LO[i]+HI[i])/2;e+=(c-mid)**2;if(c<LO[i])e+=1e3*(LO[i]-c)**2;if(c>HI[i])e+=1e3*(c-HI[i])**2}return e};
+   const rec=(j,rem)=>{if(j===n-1){P[j]=rem;const v=ev();if(v<bv){bv=v;best=P.slice()}return}for(let p=0;p<=rem;p+=step){P[j]=p;rec(j+1,rem-p)}};rec(0,100);
+   best.forEach((p,j)=>d.mats[j].p=String(p));toast('Proportions optimised: '+best.join(' / ')+' %');return true}},
+ calc(d){const o={},P=d.mats.map(m=>num(m.p)||0),tot=P.reduce((a,b)=>a+b,0);o.ptot=f(tot,1);d.mats.forEach((m,j)=>o['mh'+j]=m.nm+(P[j]?` (${P[j]}%)`:''));
+  let all=true,any=false;const pts=[],lo=[],hi=[];
+  d.rows.forEach((r,i)=>{const p=`rows.${i}.`,s=num(r.s);let c=0,has=false;d.mats.forEach((m,j)=>{const v=num(r.v?.[j]);if(ok(v)){has=true;c+=P[j]*v}});c=tot?c/tot:NaN;const L=num(r.lo),H=num(r.hi);o[p+'m']=ok(L)||ok(H)?f(((ok(L)?L:0)+(ok(H)?H:100))/2,1):'';if(ok(L))lo.push([s,L]);if(ok(H))hi.push([s,H]);if(!has)return;o[p+'c']=f(c,1);pts.push([s,c]);const b=lim(+c.toFixed(1),L,H);if(b!==null){o[p+'st']=stat(b);any=true;all&&=b}});
+  if(kind==='gran'){const wtr=((num(d.omc)||0)+(num(d.evap)||0)-(num(d.nmc)||0))*10;o.water=ok(num(d.omc))?f(wtr,0):''}else{const ob=num(d.obc);o.bit=f(ob*10,1);o.aggt=f(1000-ob*10,1)}
+  const aggT=kind==='gran'?1000:1000-(num(d.obc)||0)*10;o.qty=tot?`<div class="tw"><table class="tb"><thead><tr><th>Material</th>${d.mats.map(m=>`<th>${esc(m.nm)}</th>`).join('')}${kind==='bit'?'<th>Bitumen</th>':''}</tr></thead><tbody><tr><td class="l">Qty per tonne of mix (kg)</td>${P.map(p=>`<td>${f(aggT*p/tot,1)}</td>`).join('')}${kind==='bit'?`<td>${f((num(d.obc)||0)*10,1)}</td>`:''}</tr><tr><td class="l">% by total weight of mix</td>${P.map(p=>`<td>${f(aggT*p/tot/10,2)}</td>`).join('')}${kind==='bit'?`<td>${f(num(d.obc)||0,2)}</td>`:''}</tr></tbody></table></div>`:'';
+  o._g={pts,lo,hi};
+  o.__result=Math.abs(tot-100)>0.01?{s:'bad',t:`Total proportion is ${f(tot,1)}% — must equal 100%`}:!any?{s:'na',t:'Enter gradation of each material.'}:all?{s:'ok',t:`Combined gradation (${d.mats.map((m,j)=>m.nm+' '+P[j]+'%').join(', ')}) CONFORMS to ${SP[d.spec].n}`+(kind==='bit'&&ok(num(d.obc))?` · OBC ${d.obc}%`:'')+(kind==='gran'&&ok(num(d.omc))?` · OMC ${d.omc}%${ok(num(d.mdd))?', MDD '+d.mdd+' g/cc':''}`:'')}:{s:'bad',t:`Combined gradation DOES NOT CONFORM to ${SP[d.spec].n} — adjust proportions`};return o},
+ draw:(d,o,root)=>MOD.sv_gsb.draw({spec:'x'},o,root)
+})}
+blendMod('mix_wmm','WMM Mix Design','wmm',['40 mm','20 mm','10 mm','Stone dust'],'gran');
+blendMod('mix_gsb','GSB Mix Design','gsb1',['40 mm','20 mm','Stone dust','Sand'],'gran');
+blendMod('mix_bm','BM Mix Design (JMF)','bm2',['20 mm','10 mm','Stone dust'],'bit');
+blendMod('mix_bc','BC Mix Design (JMF)','bc1',['20 mm','10 mm','Stone dust','Filler'],'bit');
+
+/* =================== BITUMINOUS =================== */
+const CFT=[[200,213,5.56],[214,225,5],[226,237,4.55],[238,250,4.17],[251,264,3.85],[265,276,3.57],[277,289,3.33],[290,301,3.03],[302,316,2.78],[317,328,2.5],[329,340,2.27],[341,353,2.08],[354,367,1.92],[368,379,1.79],[380,392,1.67],[393,405,1.56],[406,420,1.47],[421,431,1.39],[432,443,1.32],[444,456,1.25],[457,470,1.19],[471,482,1.14],[483,495,1.09],[496,508,1.04],[509,522,1],[523,535,0.96],[536,546,0.93],[547,559,0.89],[560,573,0.86],[574,585,0.83],[586,598,0.81],[599,610,0.78],[611,625,0.76]];
+const cfVol=v=>{const r=Math.round(v);const e=CFT.find(([a,b])=>r>=a&&r<=b);return e?e[2]:NaN};
+const MX={bc1:['BC Grading 1 (19 mm)',9,2,4,3,5,65,75,13],bc2:['BC Grading 2 (13.2 mm)',9,2,4,3,5,65,75,14],dbm1:['DBM Grading 1 (37.5 mm)',9,2,4,3,5,65,75,11],dbm2:['DBM Grading 2 (26.5 mm)',9,2,4,3,5,65,75,12],bm:['BM / other (enter contract criteria)','','','','','','','','']};
+const mxCrit=k=>{const m=MX[k];return{stab:String(m[1]),fmin:String(m[2]),fmax:String(m[3]),vamin:String(m[4]),vamax:String(m[5]),vfbmin:String(m[6]),vfbmax:String(m[7]),vma:String(m[8])}};
+reg({id:'marshall',g:'Bituminous',title:'Marshall Stability (BM/BC/DBM)',rt:'Marshall Stability, Flow & Volumetric Properties',std:'ASTM D6927 / MS-2 / MoRTH 5th Rev.',
+ init:()=>({mix:'bc1',Pb:'5.5',Gmm:'',Gsb:'',c:mxCrit('bc1'),rows:rep(3,(_,i)=>({id:String(i+1),h:'',A:'',C:'',B:'',stab:'',flow:''}))}),
+ blank:()=>({id:'',h:'',A:'',C:'',B:'',stab:'',flow:''}),
+ view:d=>`<div class="frow">${F('Mix type',SEL('mix',d.mix,Object.entries(MX).map(([k,v])=>[k,v[0]])))}${F('Binder content Pb (% by mix)',N('Pb',d.Pb))}${F('Theoretical max. sp. gr. Gmm',N('Gmm',d.Gmm))}${F('Bulk sp. gr. of aggregate Gsb',N('Gsb',d.Gsb))}</div>`
+  +T('rows',[{k:'id',h:'Specimen<br>No.',t:'txt'},{k:'h',h:'Height<br>(mm)'},{k:'A',h:'Wt. in<br>air (g)'},{k:'C',h:'Wt. in<br>water (g)'},{k:'B',h:'SSD wt.<br>(g)'},{k:'vol',h:'Volume<br>(cc)',t:'o'},{k:'gmb',h:'Bulk sp.<br>gr. Gmb',t:'o'},{k:'stab',h:'Measured<br>stability (kN)'},{k:'cf',h:'Correction<br>factor',t:'o'},{k:'cs',h:'Corrected<br>stability (kN)',t:'o'},{k:'flow',h:'Flow<br>(mm)'},{k:'va',h:'Air voids<br>Va (%)',t:'o'},{k:'vma',h:'VMA<br>(%)',t:'o'},{k:'vfb',h:'VFB<br>(%)',t:'o'}],d.rows,{sn:'S.No'})
+  +`<h3>Summary vs. specification (criteria editable)</h3><div class="tw"><table class="tb"><thead><tr><th>Property</th><th>Result (avg.)</th><th>Requirement</th><th>Remarks</th></tr></thead><tbody>
+  <tr><td class="l">Marshall stability (kN)</td><td class="o" data-o="aS"></td><td>min ${N('c.stab',d.c.stab)}</td><td class="o" data-o="sS"></td></tr>
+  <tr><td class="l">Flow (mm)</td><td class="o" data-o="aF"></td><td style="white-space:nowrap">${N('c.fmin',d.c.fmin)} to ${N('c.fmax',d.c.fmax)}</td><td class="o" data-o="sF"></td></tr>
+  <tr><td class="l">Air voids Va (%)</td><td class="o" data-o="aV"></td><td>${N('c.vamin',d.c.vamin)} to ${N('c.vamax',d.c.vamax)}</td><td class="o" data-o="sV"></td></tr>
+  <tr><td class="l">VMA (%)</td><td class="o" data-o="aM"></td><td>min ${N('c.vma',d.c.vma)}</td><td class="o" data-o="sM"></td></tr>
+  <tr><td class="l">VFB (%)</td><td class="o" data-o="aB"></td><td>${N('c.vfbmin',d.c.vfbmin)} to ${N('c.vfbmax',d.c.vfbmax)}</td><td class="o" data-o="sB"></td></tr>
+  <tr><td class="l">Bulk density Gmb (g/cc)</td><td class="o" data-o="aG"></td><td>—</td><td></td></tr></tbody></table></div><p class="note">Va = 100(1 − Gmb/Gmm); VMA = 100 − Gmb·(100 − Pb)/Gsb; VFB = 100(VMA − Va)/VMA. Stability correction by specimen volume (ASTM D6927 table).</p>`,
+ onChange(k,d){if(k==='mix'){d.c=mxCrit(d.mix);return true}},
+ calc(d){const o={},Gmm=num(d.Gmm),Gsb=num(d.Gsb),Pb=num(d.Pb),R={S:[],F:[],V:[],M:[],B:[],G:[]};
+  d.rows.forEach((r,i)=>{const p=`rows.${i}.`,vol=num(r.B)-num(r.C),gmb=num(r.A)/vol,cf=cfVol(vol),cs=num(r.stab)*cf,va=100*(1-gmb/Gmm),vma=100-gmb*(100-Pb)/Gsb,vfb=100*(vma-va)/vma;o[p+'vol']=f(vol,1);o[p+'gmb']=f(gmb,3);o[p+'cf']=f(cf,2);o[p+'cs']=f(cs,2);o[p+'va']=f(va,2);o[p+'vma']=f(vma,2);o[p+'vfb']=f(vfb,1);R.S.push(cs);R.F.push(num(r.flow));R.V.push(va);R.M.push(vma);R.B.push(vfb);R.G.push(gmb)});
+  const a={};for(const k in R)a[k]=avg(R[k]);const c=d.c;o.aS=f(a.S,2);o.aF=f(a.F,2);o.aV=f(a.V,2);o.aM=f(a.M,2);o.aB=f(a.B,1);o.aG=f(a.G,3);
+  const chk=[['sS',lim(a.S,num(c.stab))],['sF',lim(a.F,num(c.fmin),num(c.fmax))],['sV',lim(a.V,num(c.vamin),num(c.vamax))],['sM',lim(a.M,num(c.vma))],['sB',lim(a.B,num(c.vfbmin),num(c.vfbmax))]];let all=true,n=0;chk.forEach(([k,b])=>{o[k]=stat(b);if(b!==null){n++;all&&=b}});
+  o.__result=!n?{s:'na',t:'Enter specimen data, Gmm and Gsb.'}:all?{s:'ok',t:`Marshall properties at ${d.Pb}% binder SATISFY the specified criteria (${MX[d.mix][0]})`}:{s:'bad',t:`One or more Marshall properties DO NOT satisfy the criteria (${MX[d.mix][0]})`};return o}
+});
+
+reg({id:'bitcon',g:'Bituminous',title:'Binder Content & Core Density',rt:'Binder Content by Extraction & Field Density of Bituminous Cores',std:'ASTM D2172 / IS 1201-1220 / MoRTH 5th Rev. Sec. 900',
+ init:()=>({jmf:'',tol:'0.3',mgmb:'',gmm:'',reqd:'98',rows:rep(2,(_,i)=>({id:String(i+1),ch:'',W1:'',W2:'',W3:''})),cores:rep(3,(_,i)=>({id:'C'+(i+1),ch:'',t:'',A:'',C:'',B:''}))}),
+ blank:l=>l==='rows'?{id:'',ch:'',W1:'',W2:'',W3:''}:{id:'',ch:'',t:'',A:'',C:'',B:''},
+ view:d=>`<h3>A. Binder content by centrifuge extraction</h3><div class="frow">${F('JMF binder content (%)',N('jmf',d.jmf))}${F('Permissible tolerance (± %)',N('tol',d.tol))}</div>`
+  +T('rows',[{k:'id',h:'Sample<br>No.',t:'txt'},{k:'ch',h:'Chainage / Truck /<br>Time',t:'txt'},{k:'W1',h:'Wt. of mix<br>before extraction (g)'},{k:'W2',h:'Wt. of aggregate<br>after extraction (g)'},{k:'W3',h:'Fines in filter<br>paper / extract (g)'},{k:'bc',h:'Binder<br>content (%)',t:'o'},{k:'st',h:'Remarks',t:'o'}],d.rows,{sn:'S.No'})
+  +`<h3>B. Density of cores (field compaction)</h3><div class="frow">${F('Lab Marshall density Gmb (g/cc)',N('mgmb',d.mgmb))}${F('Gmm (optional)',N('gmm',d.gmm))}${F('Required % of lab density',N('reqd',d.reqd))}</div>`
+  +T('cores',[{k:'id',h:'Core<br>No.',t:'txt'},{k:'ch',h:'Chainage /<br>Offset',t:'txt'},{k:'t',h:'Thickness<br>(mm)'},{k:'A',h:'Wt. in<br>air (g)'},{k:'C',h:'Wt. in<br>water (g)'},{k:'B',h:'SSD wt.<br>(g)'},{k:'g',h:'Core density<br>(g/cc)',t:'o'},{k:'pc',h:'% of lab<br>density',t:'o'},{k:'pg',h:'% of<br>Gmm',t:'o'},{k:'st',h:'Remarks',t:'o'}],d.cores,{sn:'S.No'})
+  +`<div class="frow res">${O('Average binder content','abc','%')}${O('Average core density','ag','g/cc')}${O('Average compaction','apc','%')}</div>`,
+ calc(d){const o={},jmf=num(d.jmf),tol=num(d.tol),mg=num(d.mgmb),gm=num(d.gmm),rq=num(d.reqd),bcs=[],gs=[],pcs=[];let ok1=true,n1=0,ok2=true,n2=0;
+  d.rows.forEach((r,i)=>{const p=`rows.${i}.`,b=(num(r.W1)-num(r.W2)-(num(r.W3)||0))/num(r.W1)*100;o[p+'bc']=f(b,2);bcs.push(b);const s=ok(jmf)?lim(b,jmf-tol,jmf+tol):null;if(s!==null){o[p+'st']=stat(s);n1++;ok1&&=s}});
+  d.cores.forEach((r,i)=>{const p=`cores.${i}.`,g=num(r.A)/(num(r.B)-num(r.C)),pc=g/mg*100;o[p+'g']=f(g,3);o[p+'pc']=f(pc,2);o[p+'pg']=f(g/gm*100,2);gs.push(g);pcs.push(pc);const s=lim(pc,rq);if(s!==null){o[p+'st']=stat(s);n2++;ok2&&=s}});
+  o.abc=f(avg(bcs),2);o.ag=f(avg(gs),3);o.apc=f(avg(pcs),2);
+  const t=[];if(n1)t.push(`Binder content ${ok1?'within':'OUTSIDE'} JMF ${f(jmf,2)} ± ${d.tol}%`);if(n2)t.push(`Core compaction ${ok2?'≥':'BELOW'} ${rq}% of lab density`);
+  o.__result=!t.length?{s:'na',t:'Enter extraction and/or core data.'}:{s:ok1&&ok2?'ok':'bad',t:t.join(' · ')};return o}
+});
+
+/* =================== MATERIALS =================== */
+const CEM={opc33:['OPC 33 (IS 269)',16,22,33,225],opc43:['OPC 43 (IS 269)',23,33,43,225],opc53:['OPC 53 (IS 269)',27,37,53,225],ppc:['PPC (IS 1489 Pt 1)',16,22,33,300],psc:['PSC (IS 455)',16,22,33,225]};
+reg({id:'cement',g:'Materials',title:'Cement Tests',rt:'Physical Tests on Cement',std:'IS 4031 (Parts 1–6, 11) / IS 269 : 2015 / IS 1489',
+ init:()=>({type:'opc53',brand:'',week:'',nc:'',pen:'',ist:'',fst:'',finW:'100',finR:'',blaine:'',le1:'',le2:'',sgW:'64',sgV1:'',sgV2:'',cs:[['3'],['7'],['28']].map(([a])=>({age:a,l1:'',l2:'',l3:''}))}),
+ view:d=>`<div class="frow">${F('Type of cement',SEL('type',d.type,Object.entries(CEM).map(([k,v])=>[k,v[0]])))}${F('Brand / Manufacturer',I('brand',d.brand))}${F('Week / Batch No.',I('week',d.week))}</div>
+  <div class="cards">
+  <div class="card"><h4>1. Normal consistency (IS 4031 Pt 4)</h4><div class="frow">${F('Water (% by wt.)',N('nc',d.nc))}${F('Plunger penetration from bottom (mm)',N('pen',d.pen))}</div><div class="note">Valid when penetration is 5–7 mm from bottom of mould.</div></div>
+  <div class="card"><h4>2. Setting time (IS 4031 Pt 5)</h4><div class="frow">${F('Initial setting time (min)',N('ist',d.ist))}${F('Final setting time (min)',N('fst',d.fst))}</div></div>
+  <div class="card"><h4>3. Fineness (IS 4031 Pt 1 / Pt 2)</h4><div class="frow">${F('Wt. of sample (g)',N('finW',d.finW))}${F('Residue on 90 µ sieve (g)',N('finR',d.finR))}${O('Residue','fin','%')}${F('Blaine specific surface (m²/kg)',N('blaine',d.blaine))}</div></div>
+  <div class="card"><h4>4. Soundness – Le Chatelier (IS 4031 Pt 3)</h4><div class="frow">${F('Initial distance between pointers (mm)',N('le1',d.le1))}${F('Distance after boiling (mm)',N('le2',d.le2))}${O('Expansion','le','mm')}</div></div>
+  <div class="card"><h4>5. Specific gravity (IS 4031 Pt 11)</h4><div class="frow">${F('Wt. of cement (g)',N('sgW',d.sgW))}${F('Initial flask reading V1 (ml)',N('sgV1',d.sgV1))}${F('Final reading V2 (ml)',N('sgV2',d.sgV2))}${O('Specific gravity','sg')}</div></div>
+  </div><h3>6. Compressive strength – 70.6 mm mortar cubes (IS 4031 Pt 6), area 5000 mm²</h3>`
+  +T('cs',[{k:'age',h:'Age<br>(days)'},{k:'l1',h:'Load cube 1<br>(kN)'},{k:'l2',h:'Load cube 2<br>(kN)'},{k:'l3',h:'Load cube 3<br>(kN)'},{k:'s1',h:'Strength 1<br>(N/mm²)',t:'o'},{k:'s2',h:'Strength 2',t:'o'},{k:'s3',h:'Strength 3',t:'o'},{k:'av',h:'Average<br>(N/mm²)',t:'o'},{k:'rq',h:'Min. required<br>(N/mm²)',t:'o'},{k:'st',h:'Remarks',t:'o'}],d.cs,{fixed:1})
+  +`<h3>Summary of results</h3><div data-oh="sum"></div>`,
+ calc(d){const o={},C=CEM[d.type],rows=[];const add=(t,v,r,b)=>{rows.push([t,v,r,b])};
+  const fin=num(d.finR)/num(d.finW)*100;o.fin=f(fin,2);const le=num(d.le2)-num(d.le1);o.le=f(le,1);const sg=num(d.sgW)/(num(d.sgV2)-num(d.sgV1));o.sg=f(sg,2);
+  if(ok(num(d.nc)))add('Normal consistency',f(num(d.nc),1)+' %','Report (penetration 5–7 mm)',ok(num(d.pen))?lim(num(d.pen),5,7):null);
+  if(ok(num(d.ist)))add('Initial setting time',d.ist+' min','≥ 30 min',lim(num(d.ist),30));
+  if(ok(num(d.fst)))add('Final setting time',d.fst+' min','≤ 600 min',lim(num(d.fst),null,600));
+  if(ok(fin))add('Fineness – residue on 90 µ',f(fin,2)+' %','≤ 10 %',lim(fin,null,10));
+  if(ok(num(d.blaine)))add('Fineness – Blaine',d.blaine+' m²/kg','≥ '+C[4]+' m²/kg',lim(num(d.blaine),C[4]));
+  if(ok(le))add('Soundness – Le Chatelier expansion',f(le,1)+' mm','≤ 10 mm',lim(le,null,10));
+  if(ok(sg))add('Specific gravity',f(sg,2),'Report (≈ 3.15 OPC / 2.9 PPC)',null);
+  d.cs.forEach((r,i)=>{const p=`cs.${i}.`,s=[r.l1,r.l2,r.l3].map(v=>num(v)*1000/5000);s.forEach((v,j)=>o[p+'s'+(j+1)]=f(v,2));const a=avg(s),age=num(r.age),rq=age<=3?C[1]:age<=7?C[2]:C[3];o[p+'av']=f(a,2);o[p+'rq']=f(rq,0);const b=lim(a,rq);o[p+'st']=stat(b);if(ok(a))add(`Compressive strength – ${r.age} days`,f(a,2)+' N/mm²','≥ '+rq+' N/mm²',b)});
+  o.sum=rows.length?`<div class="tw"><table class="tb"><thead><tr><th>Test</th><th>Result</th><th>Requirement (${C[0]})</th><th>Remarks</th></tr></thead><tbody>${rows.map(r=>`<tr><td class="l">${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td class="${r[3]===null?'':r[3]?'pass':'fail'}">${stat(r[3])||'—'}</td></tr>`).join('')}</tbody></table></div>`:'';
+  const ev=rows.filter(r=>r[3]!==null),bad=ev.filter(r=>!r[3]);o.__result=!ev.length?{s:'na',t:'Enter test results.'}:!bad.length?{s:'ok',t:`Cement sample CONFORMS to ${C[0]} for the tests conducted`}:{s:'bad',t:`Cement sample DOES NOT CONFORM to ${C[0]}: ${bad.map(r=>r[0]).join(', ')}`};return o}
+});
+
+const WROWS=[['pH value','IS 3025 (Pt 11)','','—','6',''],['Organic solids','IS 3025 (Pt 18)','','mg/l','','200'],['Inorganic solids','IS 3025 (Pt 18)','','mg/l','','3000'],['Sulphates (as SO₃)','IS 3025 (Pt 24)','','mg/l','','400'],['Chlorides (as Cl) – RCC','IS 3025 (Pt 32)','','mg/l','','500'],['Suspended matter','IS 3025 (Pt 17)','','mg/l','','2000'],['Acidity – 0.02N NaOH to neutralise 100 ml (phenolphthalein)','IS 3025 (Pt 22)','','ml','','5'],['Alkalinity – 0.02N H₂SO₄ to neutralise 100 ml (mixed indicator)','IS 3025 (Pt 23)','','ml','','25']];
+reg({id:'water',g:'Materials',title:'Water Test (Construction)',rt:'Test on Water for Mixing & Curing of Concrete',std:'IS 456 : 2000 cl. 5.4 / IS 3025',
+ init:()=>({src:'',use:'RCC',rows:WROWS.map(r=>({p:r[0],m:r[1],v:r[2],u:r[3],lo:r[4],hi:r[5]}))}),
+ blank:()=>({p:'',m:'',v:'',u:'',lo:'',hi:''}),
+ view:d=>`<div class="frow">${F('Source of water',I('src',d.src))}${F('Intended use',SEL('use',d.use,[['RCC','Reinforced concrete (Cl ≤ 500 mg/l)'],['PCC','Plain concrete (Cl ≤ 2000 mg/l)']]))}</div>`+T('rows',[{k:'p',h:'Parameter',t:'txt',l:1},{k:'m',h:'Test method',t:'txt'},{k:'v',h:'Result'},{k:'u',h:'Unit',t:'txt'},{k:'lo',h:'Min.'},{k:'hi',h:'Max.'},{k:'st',h:'Remarks',t:'o'}],d.rows,{sn:'S.No'})+`<p class="note">Limits per IS 456 cl. 5.4 (permissible limits for solids) — editable.</p>`,
+ onChange(k,d){if(k==='use'){const r=d.rows.find(r=>/chloride/i.test(r.p));if(r){r.hi=d.use==='PCC'?'2000':'500';r.p='Chlorides (as Cl) – '+d.use}return true}},
+ calc(d){const o={};let all=true,n=0;d.rows.forEach((r,i)=>{const b=lim(num(r.v),num(r.lo),num(r.hi));if(b!==null){o[`rows.${i}.st`]=stat(b);n++;all&&=b}});o.__result=!n?{s:'na',t:'Enter results.'}:all?{s:'ok',t:'Water sample is SUITABLE for mixing and curing of concrete (IS 456 cl. 5.4)'}:{s:'bad',t:'Water sample is NOT SUITABLE — one or more parameters exceed limits'};return o}
+});
+
+const STEEL={Fe415:[415,1.10,485,14.5],Fe415D:[415,1.12,500,18],Fe500:[500,1.08,545,12],Fe500D:[500,1.10,565,16],Fe550:[550,1.06,585,10],Fe550D:[550,1.08,600,14.5],Fe600:[600,1.06,660,10]};
+reg({id:'steel',g:'Materials',title:'Reinforcement Steel Test',rt:'Tests on High Strength Deformed Steel Bars',std:'IS 1786 : 2008 / IS 1608 / IS 1599',
+ init:()=>({grade:'Fe500D',make:'',heat:'',rows:[8,10,12,16,20,25].map(dia=>({id:'',dia:String(dia),len:'',wt:'',yl:'',ul:'',l0:'',lf:'',bend:'OK',rebend:'OK'}))}),
+ blank:()=>({id:'',dia:'',len:'',wt:'',yl:'',ul:'',l0:'',lf:'',bend:'OK',rebend:'OK'}),
+ view:d=>`<div class="frow">${F('Grade',SEL('grade',d.grade,Object.keys(STEEL)))}${F('Manufacturer / Brand',I('make',d.make))}${F('Heat / Cast No.',I('heat',d.heat))}<div data-oh="req" class="fld" style="grid-column:span 2"></div></div>`
+  +T('rows',[{k:'id',h:'Sample<br>ID',t:'txt'},{k:'dia',h:'Nominal<br>dia (mm)'},{k:'len',h:'Length<br>(m)'},{k:'wt',h:'Weight<br>(kg)'},{k:'mpm',h:'Mass/m<br>(kg/m)',t:'o'},{k:'nm',h:'Nominal<br>(d²/162)',t:'o'},{k:'var',h:'Variation<br>(%)',t:'o'},{k:'yl',h:'Yield /0.2%<br>load (kN)'},{k:'ul',h:'Ultimate<br>load (kN)'},{k:'ys',h:'YS<br>(N/mm²)',t:'o'},{k:'ts',h:'UTS<br>(N/mm²)',t:'o'},{k:'ratio',h:'UTS/YS',t:'o'},{k:'l0',h:'Gauge length<br>L0 (mm)'},{k:'lf',h:'Final length<br>(mm)'},{k:'el',h:'Elongation<br>(%)',t:'o'},{k:'bend',h:'Bend',t:'s',opts:['OK','Not OK','—']},{k:'rebend',h:'Rebend',t:'s',opts:['OK','Not OK','—']},{k:'st',h:'Remarks',t:'o'}],d.rows,{sn:'S.No'})
+  +`<p class="note">Effective area from mass: A = (mass per metre)/0.00785 mm². If L0 is blank, 5.65√A is used. Mass tolerance (IS 1786 Table 2, individual): ≤10 mm ±8%, >10–16 mm ±6%, >16 mm ±4%.</p>`,
+ calc(d){const o={},G=STEEL[d.grade];o.req=`<span>Requirements – ${d.grade}</span><b style="font-weight:500;font-size:12px;display:block;padding:4px 6px;border:1px solid #c5cdd5;background:#f6f8fa">YS ≥ ${G[0]} · UTS ≥ ${G[2]} N/mm² and ≥ ${G[1]}×YS · Elongation ≥ ${G[3]}%</b>`;let all=true,n=0;
+  d.rows.forEach((r,i)=>{const p=`rows.${i}.`,dia=num(r.dia),mpm=num(r.wt)/num(r.len),nm=dia*dia/162,vr=(mpm-nm)/nm*100,tol=dia<=10?8:dia<=16?6:4,A=mpm/0.00785,ys=num(r.yl)*1000/A,ts=num(r.ul)*1000/A,ratio=ts/ys,L0=ok(num(r.l0))?num(r.l0):5.65*Math.sqrt(A),el=(num(r.lf)-L0)/L0*100;
+   o[p+'mpm']=f(mpm,3);o[p+'nm']=f(nm,3);o[p+'var']=ok(vr)?(vr>0?'+':'')+f(vr,2):'';o[p+'ys']=f(ys,1);o[p+'ts']=f(ts,1);o[p+'ratio']=f(ratio,3);o[p+'el']=f(el,1);
+   const ch=[lim(vr,-tol,tol),lim(ys,G[0]),ok(ts)?(ts>=G[2]&&ratio>=G[1]-1e-9):null,lim(el,G[3]),r.bend==='Not OK'?false:null,r.rebend==='Not OK'?false:null].filter(x=>x!==null);if(ch.length){const b=ch.every(Boolean);o[p+'st']=stat(b);n++;all&&=b}});
+  o.__result=!n?{s:'na',t:'Enter sample data.'}:all?{s:'ok',t:`All ${n} sample(s) CONFORM to IS 1786 for grade ${d.grade}`}:{s:'bad',t:`One or more samples DO NOT CONFORM to IS 1786 grade ${d.grade}`};return o}
+});
+
+const BCLS=['3.5','5','7.5','10','12.5','15','17.5','20','25','30','35'];
+reg({id:'brickwa',g:'Materials',title:'Brick – Water Absorption & Strength',rt:'Water Absorption, Compressive Strength & Efflorescence of Bricks',std:'IS 3495 (Parts 1–3) : 2019 / IS 1077 : 1992',
+ init:()=>({cls:'7.5',eff:'Nil',rows:rep(5,(_,i)=>({id:String(i+1),W1:'',W2:''})),cs:rep(5,(_,i)=>({id:String(i+1),L:'',B:'',load:''}))}),
+ blank:l=>l==='rows'?{id:'',W1:'',W2:''}:{id:'',L:'',B:'',load:''},
+ view:d=>`<div class="frow">${F('Class designation',SEL('cls',d.cls,BCLS.map(c=>[c,'Class '+c])))}${O('Max. water absorption allowed','wal','%')}${F('Efflorescence (IS 3495 Pt 3)',SEL('eff',d.eff,['Nil','Slight','Moderate','Heavy','Serious']))}</div><h3>A. Water absorption – 24 h cold immersion (IS 3495 Pt 2)</h3>`
+  +T('rows',[{k:'id',h:'Brick No.',t:'txt'},{k:'W1',h:'Dry weight W1 (g)'},{k:'W2',h:'Wet weight after 24 h W2 (g)'},{k:'wa',h:'Water absorption (%)',t:'o'}],d.rows,{sn:'S.No'})
+  +`<h3>B. Compressive strength (IS 3495 Pt 1)</h3>`+T('cs',[{k:'id',h:'Brick No.',t:'txt'},{k:'L',h:'Length of bed face (mm)'},{k:'B',h:'Width of bed face (mm)'},{k:'load',h:'Max. load (kN)'},{k:'s',h:'Compressive strength (N/mm²)',t:'o'}],d.cs,{sn:'S.No'})
+  +`<div class="frow res">${O('Average water absorption','awa','%')}${O('Average compressive strength','acs','N/mm²')}</div>`,
+ calc(d){const o={},cl=num(d.cls),wal=cl<=12.5?20:15;o.wal=String(wal);const was=d.rows.map((r,i)=>{const w=(num(r.W2)-num(r.W1))/num(r.W1)*100;o[`rows.${i}.wa`]=f(w,2);return w});const css=d.cs.map((r,i)=>{const s=num(r.load)*1000/(num(r.L)*num(r.B));o[`cs.${i}.s`]=f(s,2);return s});
+  const aw=avg(was),ac=avg(css);o.awa=f(aw,2);o.acs=f(ac,2);const t=[];let good=true;
+  if(ok(aw)){const b=aw<=wal;good&&=b;t.push(`Water absorption ${f(aw,2)}% ${b?'≤':'>'} ${wal}%`)}
+  if(ok(ac)){const b=ac>=cl;good&&=b;t.push(`Strength ${f(ac,2)} N/mm² ${b?'≥':'<'} ${cl}`)}
+  const effOK=cl<=12.5?['Nil','Slight','Moderate'].includes(d.eff):['Nil','Slight'].includes(d.eff);if(t.length){good&&=effOK;t.push(`Efflorescence ${d.eff}${effOK?'':' (not acceptable)'}`)}
+  o.__result=!t.length?{s:'na',t:'Enter brick test data.'}:{s:good?'ok':'bad',t:`${t.join(' · ')} — ${good?'CONFORMS':'DOES NOT CONFORM'} to Class ${d.cls} (IS 1077)`};return o}
+});
+
+const BSZ={mod:['Modular 190 × 90 × 90 mm',3800,80,1800,40,1800,40],nmod:['Non-modular 230 × 110 × 70 mm',4600,80,2200,40,1400,40],mod40:['Modular 190 × 90 × 40 mm',3800,80,1800,40,800,40],custom:['Custom',0,0,0,0,0,0]};
+reg({id:'bricksz',g:'Materials',title:'Brick – Dimension Test',rt:'Dimensional Tolerance of Burnt Clay Bricks (20 bricks)',std:'IS 1077 : 1992 / IS 2117',
+ init:()=>({type:'nmod',...bsz('nmod'),tL:'',tB:'',tH:'',rows:rep(20,()=>({L:'',B:'',H:''}))}),
+ blank:()=>({L:'',B:'',H:''}),
+ view:d=>`<div class="frow">${F('Brick size',SEL('type',d.type,Object.entries(BSZ).map(([k,v])=>[k,v[0]])))}${F('Specified total length (mm)',N('sL',d.sL))}${F('Tolerance ± (mm)',N('xL',d.xL))}${F('Specified total width (mm)',N('sB',d.sB))}${F('Tolerance ± (mm)',N('xB',d.xB))}${F('Specified total height (mm)',N('sH',d.sH))}${F('Tolerance ± (mm)',N('xH',d.xH))}</div>
+  <h3>A. Individual measurements (optional)</h3>`+T('rows',[{k:'L',h:'Length (mm)'},{k:'B',h:'Width (mm)'},{k:'H',h:'Height (mm)'}],d.rows,{sn:'Brick'})
+  +`<h3>B. Overall measurement of 20 bricks</h3><div class="frow">${F('Total length – direct (mm)',N('tL',d.tL,{ph:'blank = sum of rows'}))}${F('Total width – direct (mm)',N('tB',d.tB,{ph:'blank = sum of rows'}))}${F('Total height – direct (mm)',N('tH',d.tH,{ph:'blank = sum of rows'}))}</div>
+  <div class="tw"><table class="tb"><thead><tr><th>Dimension</th><th>Measured total (mm)</th><th>Specified (mm)</th><th>Permissible range (mm)</th><th>Avg. per brick (mm)</th><th>Remarks</th></tr></thead><tbody>${['L','B','H'].map(k=>`<tr><td class="l">${{L:'Length',B:'Width',H:'Height'}[k]}</td><td class="o" data-o="m${k}"></td><td class="o" data-o="s${k}o"></td><td class="o" data-o="r${k}"></td><td class="o" data-o="a${k}"></td><td class="o" data-o="st${k}"></td></tr>`).join('')}</tbody></table></div>`,
+ onChange(k,d){if(k==='type'){Object.assign(d,bsz(d.type));return true}},
+ calc(d){const o={};let all=true,n=0;['L','B','H'].forEach(k=>{const rs=d.rows.map(r=>num(r[k])).filter(ok);const m=ok(num(d['t'+k]))?num(d['t'+k]):(rs.length?rs.reduce((a,b)=>a+b,0):NaN);const cnt=ok(num(d['t'+k]))?20:rs.length;const s=num(d['s'+k]),x=num(d['x'+k]);o['m'+k]=f(m,0)+(cnt&&cnt!==20&&!ok(num(d['t'+k]))?` (${cnt} bricks)`:'');o['s'+k+'o']=f(s,0);o['r'+k]=ok(s)?`${s-x} – ${s+x}`:'';o['a'+k]=cnt?f(m/cnt,1):'';const b=cnt===20?lim(m,s-x,s+x):null;if(b!==null){o['st'+k]=stat(b);n++;all&&=b}});
+  o.__result=!n?{s:'na',t:'Enter measurements of 20 bricks (individually or as totals).'}:all?{s:'ok',t:`Dimensions of 20 bricks are WITHIN permissible tolerance (${BSZ[d.type][0]})`}:{s:'bad',t:'Dimensions are OUTSIDE permissible tolerance — sample REJECTED'};return o}
+});
+function bsz(k){const v=BSZ[k];return{sL:String(v[1]||''),xL:String(v[2]||''),sB:String(v[3]||''),xB:String(v[4]||''),sH:String(v[5]||''),xH:String(v[6]||'')}}
+
+const APPS={conc_w:['Concrete – wearing surface (IS 383)',30,30,30,40,'',8],conc_o:['Concrete – other than wearing (IS 383)',45,45,50,40,'',8],wmm:['WMM (MoRTH 406)',30,'',40,30,2,''],gsb:['GSB (MoRTH 401)',40,'','','','',''],bm:['BM (MoRTH 504)',30,'',40,35,2,''],dbm:['DBM (MoRTH 505)',27,'',35,35,2,''],bc:['BC (MoRTH 507)',24,'',30,35,2,'']};
+const appLim=k=>{const a=APPS[k];return{aiv:String(a[1]),acv:String(a[2]),la:String(a[3]),fiei:String(a[4]),wa:String(a[5]),silt:String(a[6])}};
+reg({id:'aggr',g:'Materials',title:'Aggregate Physical Tests',rt:'Physical Properties of Aggregates',std:'IS 2386 (Parts 1, 3, 4) : 1963',
+ init:()=>({app:'conc_w',size:'20 mm',lim:appLim('conc_w'),aiv:{A:'',B:''},acv:{A:'',B:''},la:{grade:'A',A:'5000',B:''},fe:{W:'',F:'',N:'',E:''},sg:{A:'',B:'',C:'',D:''},silt:{V1:'',V2:''}}),
+ view:d=>{const L=(k)=>`<div class="fld"><span>Permissible max. (%)</span>${N('lim.'+k,d.lim[k])}</div>`;return`<div class="frow">${F('Application / specification',SEL('app',d.app,Object.entries(APPS).map(([k,v])=>[k,v[0]])))}${F('Aggregate size tested',I('size',d.size))}</div><div class="cards">
+  <div class="card blk"><h4>1. Aggregate Impact Value (IS 2386 Pt 4)</h4><div class="frow">${F('Wt. of oven-dry sample A (g)',N('aiv.A',d.aiv.A))}${F('Wt. passing 2.36 mm B (g)',N('aiv.B',d.aiv.B))}${O('AIV = B/A × 100','aiv','%')}${L('aiv')}</div><div class="st" data-o="saiv"></div></div>
+  <div class="card blk"><h4>2. Aggregate Crushing Value (IS 2386 Pt 4)</h4><div class="frow">${F('Wt. of oven-dry sample A (g)',N('acv.A',d.acv.A))}${F('Wt. passing 2.36 mm B (g)',N('acv.B',d.acv.B))}${O('ACV = B/A × 100','acv','%')}${L('acv')}</div><div class="st" data-o="sacv"></div></div>
+  <div class="card blk"><h4>3. Los Angeles Abrasion (IS 2386 Pt 4)</h4><div class="frow">${F('Grading',SEL('la.grade',d.la.grade,['A','B','C','D','E','F','G']))}${F('Original wt. A (g)',N('la.A',d.la.A))}${F('Wt. retained on 1.70 mm B (g)',N('la.B',d.la.B))}${O('LAA = (A−B)/A × 100','la','%')}${L('la')}</div><div class="st" data-o="sla"></div></div>
+  <div class="card blk"><h4>4. Flakiness & Elongation Index (IS 2386 Pt 1)</h4><div class="frow">${F('Total wt. of sample (g)',N('fe.W',d.fe.W))}${F('Wt. of flaky particles (g)',N('fe.F',d.fe.F))}${F('Wt. of non-flaky tested (g)',N('fe.N',d.fe.N,{ph:'auto = total − flaky'}))}${F('Wt. of elongated particles (g)',N('fe.E',d.fe.E))}${O('Flakiness index','fi','%')}${O('Elongation index','ei','%')}${O('Combined FI + EI','fiei','%')}${L('fiei')}</div><div class="st" data-o="sfiei"></div></div>
+  <div class="card blk"><h4>5. Specific Gravity & Water Absorption (IS 2386 Pt 3)</h4><div class="frow">${F('Wt. basket + sample in water A1 (g)',N('sg.A',d.sg.A))}${F('Wt. empty basket in water A2 (g)',N('sg.B',d.sg.B))}${F('Wt. SSD sample in air B (g)',N('sg.C',d.sg.C))}${F('Wt. oven-dry sample C (g)',N('sg.D',d.sg.D))}${O('Bulk sp. gravity','bsg')}${O('Apparent sp. gravity','asg')}${O('Water absorption','wa','%')}${L('wa')}</div><div class="st" data-o="swa"></div></div>
+  <div class="card blk"><h4>6. Silt Content of Sand (field test)</h4><div class="frow">${F('Volume of sand V1 (ml)',N('silt.V1',d.silt.V1))}${F('Volume of silt layer V2 (ml)',N('silt.V2',d.silt.V2))}${O('Silt content = V2/V1 × 100','silt','%')}${L('silt')}</div><div class="st" data-o="ssilt"></div></div>
+  </div><p class="note">Permissible limits pre-filled for the selected application and editable — verify against contract specification.</p>`},
+ onChange(k,d){if(k==='app'){d.lim=appLim(d.app);return true}},
+ calc(d){const o={},res=[];const put=(k,v,label)=>{o[k]=f(v,2);const b=lim(v,null,num(d.lim[k]));o['s'+k]=b===null?'':(b?'PASS':'FAIL');if(ok(v))res.push([label,f(v,2),b])};
+  put('aiv',num(d.aiv.B)/num(d.aiv.A)*100,'AIV');put('acv',num(d.acv.B)/num(d.acv.A)*100,'ACV');put('la',(num(d.la.A)-num(d.la.B))/num(d.la.A)*100,'LA abrasion');
+  const W=num(d.fe.W),Fl=num(d.fe.F),Nn=ok(num(d.fe.N))?num(d.fe.N):W-Fl,fi=Fl/W*100,ei=num(d.fe.E)/Nn*100;o.fi=f(fi,2);o.ei=f(ei,2);put('fiei',ok(fi)&&ok(ei)?fi+ei:NaN,'FI+EI');
+  const A1=num(d.sg.A),A2=num(d.sg.B),Bs=num(d.sg.C),Cd=num(d.sg.D),Ws=A1-A2;o.bsg=f(Cd/(Bs-Ws),3);o.asg=f(Cd/(Cd-Ws),3);put('wa',(Bs-Cd)/Cd*100,'Water absorption');
+  put('silt',num(d.silt.V2)/num(d.silt.V1)*100,'Silt content');
+  const ev=res.filter(r=>r[2]!==null),bad=ev.filter(r=>!r[2]);o.__result=!res.length?{s:'na',t:'Enter results for the tests conducted.'}:{s:bad.length?'bad':'ok',t:res.map(r=>`${r[0]} ${r[1]}%`).join(' · ')+' — '+(bad.length?'NOT within limits: '+bad.map(r=>r[0]).join(', '):'all within limits for '+APPS[d.app][0])};return o}
+});
+
+/* =================== TOOLS: scanner, signatures, records, settings =================== */
+const idb={p:null,db(){return this.p||(this.p=new Promise((res,rej)=>{const r=indexedDB.open('civlab',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}))},
+ async get(k){try{const db=await this.db();return await new Promise(r=>{const q=db.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>r(q.result);q.onerror=()=>r(undefined)})}catch(e){return undefined}},
+ async set(k,v){try{const db=await this.db();await new Promise(r=>{const t=db.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=r;t.onerror=r})}catch(e){}}};
+let SCAN=[];let camStream=null;
+idb.get('scan').then(v=>{if(Array.isArray(v))SCAN=v;if(cur==='scanner')render()});
+const saveScan=()=>idb.set('scan',SCAN);
+const loadImg=src=>new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src});
+async function downscale(src,max=2000){const im=await loadImg(src);const k=Math.min(1,max/Math.max(im.naturalWidth,im.naturalHeight));const c=document.createElement('canvas');c.width=Math.round(im.naturalWidth*k);c.height=Math.round(im.naturalHeight*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);return c.toDataURL('image/jpeg',0.9)}
+async function procPage(pg){const im=await loadImg(pg.src),r=((pg.rot||0)%360+360)%360,sw=im.naturalWidth,sh=im.naturalHeight,c=document.createElement('canvas'),r90=r===90||r===270;c.width=r90?sh:sw;c.height=r90?sw:sh;const g=c.getContext('2d');g.translate(c.width/2,c.height/2);g.rotate(r*Math.PI/180);g.drawImage(im,-sw/2,-sh/2);g.setTransform(1,0,0,1,0,0);
+ if(pg.f!=='orig'){const W=c.width,H=c.height,id=g.getImageData(0,0,W,H),a=id.data,n=W*H,lum=new Uint8ClampedArray(n),hist=new Uint32Array(256);for(let i=0;i<n;i++){const v=(a[i*4]*0.299+a[i*4+1]*0.587+a[i*4+2]*0.114)|0;lum[i]=v;hist[v]++}
+  let lo=0,hi=255,acc=0;for(let v=0;v<256;v++){acc+=hist[v];if(acc>n*0.02){lo=v;break}}acc=0;for(let v=255;v>=0;v--){acc+=hist[v];if(acc>n*0.05){hi=v;break}}const sc=255/Math.max(1,hi-lo);
+  if(pg.f==='enh'){for(let i=0;i<n*4;i+=4)for(let ch=0;ch<3;ch++)a[i+ch]=Math.min(255,Math.max(0,(a[i+ch]-lo)*sc*1.04))}
+  else if(pg.f==='gray'){for(let i=0;i<n;i++){const v=Math.min(255,Math.max(0,(lum[i]-lo)*sc));a[i*4]=a[i*4+1]=a[i*4+2]=v}}
+  else if(pg.f==='bw'){const S=Math.max(8,Math.round(W/16))|0,ii=new Float64Array((W+1)*(H+1));for(let y=0;y<H;y++){let rs=0;for(let x=0;x<W;x++){rs+=lum[y*W+x];ii[(y+1)*(W+1)+x+1]=ii[y*(W+1)+x+1]+rs}}
+   for(let y=0;y<H;y++){const y0=Math.max(0,y-S),y1=Math.min(H-1,y+S);for(let x=0;x<W;x++){const x0=Math.max(0,x-S),x1=Math.min(W-1,x+S),cnt=(x1-x0+1)*(y1-y0+1),sum=ii[(y1+1)*(W+1)+x1+1]-ii[y0*(W+1)+x1+1]-ii[(y1+1)*(W+1)+x0]+ii[y0*(W+1)+x0],v=lum[y*W+x]*cnt<sum*0.88?0:255,j=(y*W+x)*4;a[j]=a[j+1]=a[j+2]=v}}}
+  g.putImageData(id,0,0)}
+ pg.out=c.toDataURL('image/jpeg',0.85);pg.w=c.width;pg.h=c.height}
+async function addScan(src){const s=await downscale(src);const pg={src:s,f:'enh',rot:0};await procPage(pg);SCAN.push(pg);saveScan()}
+function scanPdf(pdf,head){const{jsPDF}=window.jspdf;const isNew=!pdf;pdf=pdf||new jsPDF({unit:'mm',format:'a4'});SCAN.forEach((pg,i)=>{if(!(isNew&&i===0))pdf.addPage();let top=10;if(head){pdf.setFontSize(10);pdf.setTextColor(60);pdf.text(`${head} – Page ${i+1} of ${SCAN.length}`,10,10);top=14}const mw=190,mh=297-top-12,k=Math.min(mw/pg.w,mh/pg.h),w=pg.w*k,h=pg.h*k;pdf.addImage(pg.out,'JPEG',(210-w)/2,top,w,h)});return pdf}
+reg({id:'scanner',g:'Tools',title:'Document Scanner',custom:1,
+ render(el){el.innerHTML=`<div class="tool"><h2>Document Scanner</h2><p class="sub">Scan delivery challans, test certificates, MTCs, site registers or lab sheets with the camera. Pages are enhanced, saved on this device, and can be exported as PDF, shared, or attached to test reports.</p>
+ <div class="btns"><button class="btn pri" data-act="cam">📷 Open camera</button><label class="btn" style="display:inline-flex;align-items:center">🖼 Capture / upload images<input type="file" accept="image/*" capture="environment" multiple id="scanfile" hidden></label><button class="btn" data-act="scanpdf">⬇ Export PDF</button><button class="btn" data-act="scanshare">↗ Share PDF</button><button class="btn dan" data-act="scanclear">Clear all</button></div>
+ <label class="chk"><input type="checkbox" id="annex" ${S.settings.annex?'checked':''}> Attach scanned pages as annexure to every test report PDF</label>
+ <div id="camwrap" hidden><video id="vid" autoplay playsinline muted></video><div class="btns" style="justify-content:center"><button class="btn pri" data-act="snap">● Capture page</button><button class="btn" data-act="camoff">Close camera</button></div></div>
+ <div class="pages">${SCAN.length?SCAN.map((pg,i)=>`<div class="pg"><img src="${pg.out}" alt="Scanned page ${i+1}"><div class="row"><b>${i+1}</b><select data-sf="${i}">${[['enh','Auto enhance'],['bw','Black & white'],['gray','Grayscale'],['orig','Original']].map(([v,l])=>`<option value="${v}" ${pg.f===v?'selected':''}>${l}</option>`).join('')}</select></div><div class="row"><button class="btn" data-act="srot" data-i="${i}" title="Rotate">⟳</button><button class="btn" data-act="sup" data-i="${i}" title="Move up">↑</button><button class="btn" data-act="sdn" data-i="${i}" title="Move down">↓</button><button class="btn dan" data-act="sdel" data-i="${i}" title="Delete">🗑</button></div></div>`).join(''):'<p class="sub">No pages yet.</p>'}</div></div>`;
+  $('#scanfile',el).onchange=async e=>{const fs=[...e.target.files];if(!fs.length)return;toast('Processing '+fs.length+' image(s)…');for(const fl of fs){const src=await new Promise(r=>{const rd=new FileReader();rd.onload=()=>r(rd.result);rd.readAsDataURL(fl)});try{await addScan(src)}catch(er){toast('Could not read image')}}render()};
+  $('#annex',el).onchange=e=>{S.settings.annex=e.target.checked;save()};
+  $$('[data-sf]',el).forEach(s=>s.onchange=async()=>{const pg=SCAN[+s.dataset.sf];pg.f=s.value;await procPage(pg);saveScan();render()})},
+ async act(a,d,b){const i=+b.dataset.i;
+  if(a==='cam'){try{camStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}}});$('#camwrap').hidden=false;$('#vid').srcObject=camStream}catch(e){toast('Camera not available — use “Capture / upload images”')}}
+  if(a==='snap'){const v=$('#vid');if(!v||!v.videoWidth)return;const c=document.createElement('canvas');c.width=v.videoWidth;c.height=v.videoHeight;c.getContext('2d').drawImage(v,0,0);await addScan(c.toDataURL('image/jpeg',0.92));toast('Page '+SCAN.length+' captured');const s=camStream;render();if(s){camStream=s;$('#camwrap').hidden=false;$('#vid').srcObject=s}}
+  if(a==='camoff'){stopCam();render()}
+  if(a==='srot'){SCAN[i].rot=(SCAN[i].rot+90)%360;await procPage(SCAN[i]);saveScan();render()}
+  if(a==='sup'&&i>0){[SCAN[i-1],SCAN[i]]=[SCAN[i],SCAN[i-1]];saveScan();render()}
+  if(a==='sdn'&&i<SCAN.length-1){[SCAN[i+1],SCAN[i]]=[SCAN[i],SCAN[i+1]];saveScan();render()}
+  if(a==='sdel'){SCAN.splice(i,1);saveScan();render()}
+  if(a==='scanclear'&&SCAN.length&&confirm('Delete all scanned pages?')){SCAN=[];saveScan();render()}
+  if(a==='scanpdf')doPdf();if(a==='scanshare')doShare()}
+});
+function stopCam(){if(camStream){camStream.getTracks().forEach(t=>t.stop());camStream=null}}
+
+function attachPad(cv){const g=cv.getContext('2d');let drawing=false,last=null,dirty=false;const size=()=>{const r=cv.getBoundingClientRect(),dpr=window.devicePixelRatio||1;cv.width=r.width*dpr;cv.height=r.height*dpr;g.setTransform(dpr,0,0,dpr,0,0);g.lineCap='round';g.lineJoin='round';g.strokeStyle='#0b2a6b';g.lineWidth=2.4};size();
+ const pos=e=>{const r=cv.getBoundingClientRect();return[e.clientX-r.left,e.clientY-r.top]};
+ cv.onpointerdown=e=>{drawing=true;dirty=true;last=pos(e);cv.setPointerCapture(e.pointerId);g.beginPath();g.arc(last[0],last[1],1.1,0,7);g.fillStyle='#0b2a6b';g.fill()};
+ cv.onpointermove=e=>{if(!drawing)return;const p=pos(e);g.beginPath();g.moveTo(last[0],last[1]);const m=[(last[0]+p[0])/2,(last[1]+p[1])/2];g.quadraticCurveTo(last[0],last[1],m[0],m[1]);g.lineTo(p[0],p[1]);g.stroke();last=p};
+ cv.onpointerup=cv.onpointercancel=()=>{drawing=false};
+ return{clear(){g.clearRect(0,0,cv.width,cv.height);dirty=false},isDirty:()=>dirty,png(){return trimCanvas(cv)},async load(src){const im=await loadImg(src);const r=cv.getBoundingClientRect(),k=Math.min(r.width/im.width,r.height/im.height,1);g.drawImage(im,(r.width-im.width*k)/2,(r.height-im.height*k)/2,im.width*k,im.height*k);dirty=true}}}
+function trimCanvas(cv){const g=cv.getContext('2d'),{width:W,height:H}=cv,a=g.getImageData(0,0,W,H).data;let x0=W,y0=H,x1=-1,y1=-1;for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(a[(y*W+x)*4+3]>10){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y}if(x1<0)return'';const p=8,w=x1-x0+1+2*p,h=y1-y0+1+2*p,c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(cv,x0-p,y0-p,w,h,0,0,w,h);return c.toDataURL('image/png')}
+async function fileToData(fl,max=900){const src=await new Promise(r=>{const rd=new FileReader();rd.onload=()=>r(rd.result);rd.readAsDataURL(fl)});const im=await loadImg(src);const k=Math.min(1,max/Math.max(im.width,im.height));const c=document.createElement('canvas');c.width=im.width*k;c.height=im.height*k;c.getContext('2d').drawImage(im,0,0,c.width,c.height);return c.toDataURL('image/png')}
+
+reg({id:'sign',g:'Tools',title:'Signatures',custom:1,
+ render(el){el.innerHTML=`<div class="tool"><h2>Signature System</h2><p class="sub">Set up the signatories that appear at the foot of every report. Draw a signature with finger/stylus/mouse or upload a scanned signature image. On each report, tap a signature box to sign or un-sign that report — the date of signing is recorded.</p>
+ ${S.sig.map((s,i)=>`<div class="slot"><label class="fld"><span>Role / caption</span><input data-sg="${i}.label" value="${esc(s.label)}"></label><label class="fld"><span>Name</span><input data-sg="${i}.name" value="${esc(s.name)}"></label><label class="fld"><span>Designation / Organisation</span><input data-sg="${i}.des" value="${esc(s.des)}"></label><label class="chk"><input type="checkbox" data-sgc="${i}" ${s.on?'checked':''}> Show on reports</label>
+ <div class="pad"><canvas class="padc" data-pad="${i}"></canvas><div class="btns"><button class="btn pri" data-act="psave" data-i="${i}">Save signature</button><button class="btn" data-act="pclear" data-i="${i}">Clear</button><label class="btn">Upload image<input type="file" accept="image/*" data-pup="${i}" hidden></label><button class="btn dan" data-act="sgdel" data-i="${i}">Remove signatory</button>${s.img?'<span class="sub" style="align-self:center">✔ Signature saved</span>':''}</div></div></div>`).join('')}
+ <button class="btn" data-act="sgadd">+ Add signatory</button></div>`;
+  PADS={};$$('[data-pad]',el).forEach(cv=>{const i=+cv.dataset.pad;PADS[i]=attachPad(cv);if(S.sig[i].img)PADS[i].load(S.sig[i].img)});
+  $$('[data-sg]',el).forEach(inp=>inp.oninput=()=>{const[i,k]=inp.dataset.sg.split('.');S.sig[+i][k]=inp.value;save()});
+  $$('[data-sgc]',el).forEach(c=>c.onchange=()=>{S.sig[+c.dataset.sgc].on=c.checked;save()});
+  $$('[data-pup]',el).forEach(u=>u.onchange=async()=>{const i=+u.dataset.pup;if(!u.files[0])return;S.sig[i].img=await fileToData(u.files[0]);save();toast('Signature image saved');render()})},
+ act(a,d,b){const i=+b.dataset.i;if(a==='psave'){const p=PADS[i];const png=p&&p.png();if(!png){toast('Draw a signature first');return}S.sig[i].img=png;save();toast('Signature saved');render()}
+  if(a==='pclear'){PADS[i]?.clear();S.sig[i].img='';save();render()}
+  if(a==='sgadd'){S.sig.push({label:'Signatory',name:'',des:'',on:true,img:''});save();render()}
+  if(a==='sgdel'&&confirm('Remove this signatory?')){S.sig.splice(i,1);save();render()}}
+});
+let PADS={};
+
+reg({id:'records',g:'Tools',title:'Saved Records',custom:1,
+ render(el){const ft=this.ft||'';const rs=S.records.filter(r=>!ft||r.tab===ft);el.innerHTML=`<div class="tool"><h2>Saved Records</h2><p class="sub">Every report saved with “Save” is kept here on this device. Open to edit, duplicate for a new sample, or export a backup to move data to another phone/computer.</p>
+ <div class="btns"><select id="rft" style="max-width:320px"><option value="">All tests (${S.records.length})</option>${MODS.filter(m=>!m.custom).map(m=>`<option value="${m.id}" ${ft===m.id?'selected':''}>${esc(m.title)}</option>`).join('')}</select><button class="btn" data-act="bexp">⬇ Export backup (.json)</button><label class="btn">⬆ Import backup<input type="file" accept="application/json,.json" id="bimp" hidden></label><button class="btn" data-act="csv">⬇ Register (.csv)</button></div>
+ <div style="overflow-x:auto"><table><thead><tr><th>Test</th><th>Report No.</th><th>Date</th><th>Location / Sample</th><th>Result</th><th></th></tr></thead><tbody>${rs.length?rs.map(r=>`<tr><td>${esc(MOD[r.tab]?.title||r.tab)}</td><td>${esc(r.no||'—')}</td><td>${fmtDate(r.date)}</td><td>${esc(r.loc||'')}</td><td style="max-width:320px;font-size:12px">${esc(r.res||'')}</td><td style="white-space:nowrap"><button class="btn pri" data-act="ropen" data-id="${r.id}">Open</button> <button class="btn" data-act="rdup" data-id="${r.id}">Duplicate</button> <button class="btn dan" data-act="rdel" data-id="${r.id}">Delete</button></td></tr>`).join(''):'<tr><td colspan="6">No saved records yet.</td></tr>'}</tbody></table></div></div>`;
+  $('#rft',el).onchange=e=>{this.ft=e.target.value;render()};
+  $('#bimp',el).onchange=async e=>{const fl=e.target.files[0];if(!fl)return;try{const j=JSON.parse(await fl.text());if(!j.tests)throw 0;if(!confirm('Replace all current data with this backup?'))return;S=j;S.records??=[];saveNow();applyTheme();toast('Backup restored');buildNav();render()}catch(er){toast('Invalid backup file')}}},
+ act(a,d,b){const r=S.records.find(x=>x.id===b.dataset.id);
+  if(a==='ropen'&&r){S.tests[r.tab]=deep(r.data);save();go(r.tab)}
+  if(a==='rdup'&&r){const c=deep(r.data);delete c._rid;c.meta.no='';c.meta.date=today();c.meta.sign={};c.meta.signAt={};S.tests[r.tab]=c;save();go(r.tab);toast('Duplicated — enter new report no.')}
+  if(a==='rdel'&&r&&confirm('Delete this record?')){S.records=S.records.filter(x=>x!==r);save();render()}
+  if(a==='bexp')download(new Blob([JSON.stringify(S)],{type:'application/json'}),`civil-lab-backup-${today()}.json`);
+  if(a==='csv'){const q=v=>`"${String(v??'').replace(/"/g,'""')}"`;const lines=[['Test','Report No','Date','Location','Result','Saved at'].map(q).join(',')].concat(S.records.map(r=>[MOD[r.tab]?.title||r.tab,r.no,fmtDate(r.date),r.loc,r.res,r.at].map(q).join(',')));download(new Blob(['﻿'+lines.join('\n')],{type:'text/csv'}),`test-register-${today()}.csv`)}}
+});
+
+reg({id:'settings',g:'Tools',title:'Project & Settings',custom:1,
+ render(el){const p=S.project,s=S.settings;el.innerHTML=`<div class="tool"><h2>Project & Settings</h2><p class="sub">These details appear in the header of every report. You can also edit them directly on any report.</p>
+ <div class="frow">${[['name','Name of work / Project'],['client','Client / Employer'],['consultant','Consultant / PMC / Authority Engineer'],['contractor','Contractor'],['agreement','Agreement / Package No.']].map(([k,l])=>`<label class="fld"><span>${l}</span><input data-pj="${k}" value="${esc(p[k])}"></label>`).join('')}<label class="fld"><span>Laboratory name (report heading)</span><input data-st="lab" value="${esc(s.lab)}"></label><label class="fld"><span>Theme</span><select data-st="theme">${['auto','light','dark'].map(t=>`<option ${s.theme===t?'selected':''}>${t}</option>`).join('')}</select></label></div>
+ <h3 style="margin-top:18px">Company logo</h3><div class="btns">${s.logo?`<img src="${s.logo}" style="max-height:60px;background:#fff;padding:4px;border-radius:4px">`:''}<label class="btn">Upload logo<input type="file" accept="image/*" id="logoup" hidden></label>${s.logo?'<button class="btn" data-act="logodel">Remove logo</button>':''}</div>
+ <h3 style="margin-top:18px">Data</h3><p class="sub">All data is stored only in this browser on this device. Use Records → Export backup regularly.</p><div class="btns"><button class="btn dan" data-act="wipe">Erase all data on this device</button></div></div>`;
+  $$('[data-pj]',el).forEach(i=>i.oninput=()=>{S.project[i.dataset.pj]=i.value;save()});
+  $$('[data-st]',el).forEach(i=>i.oninput=i.onchange=()=>{S.settings[i.dataset.st]=i.value;save();if(i.dataset.st==='theme')applyTheme()});
+  $('#logoup',el).onchange=async e=>{if(!e.target.files[0])return;S.settings.logo=await fileToData(e.target.files[0],360);save();render()}},
+ act(a){if(a==='logodel'){S.settings.logo='';save();render()}if(a==='wipe'&&confirm('Erase ALL tests, records, signatures and settings on this device?')){localStorage.removeItem(LS);idb.set('scan',[]);location.reload()}}
+});
+
+/* =================== shell & rendering =================== */
+function sigBlock(d){const on=S.sig.map((s,i)=>[s,i]).filter(([s])=>s.on);if(!on.length)return'';return`<div class="sigs">${on.map(([s,i])=>{const signed=d.meta.sign[i]&&s.img;return`<div class="sg"><div class="sgimg" data-act="sign" data-i="${i}" title="Tap to sign / unsign">${signed?`<img src="${s.img}" alt="">`:`<span class="hint">✎ tap to sign</span>`}</div><div class="sgl">${esc(s.label)}</div><div class="sgn">${esc(s.name)}${s.des?`<br>${esc(s.des)}`:''}</div>${signed&&d.meta.signAt[i]?`<div class="sgd">Date: ${fmtDate(d.meta.signAt[i])}</div>`:''}</div>`}).join('')}</div>`}
+function shell(m,d){const P=S.project,M=d.meta;
+ return`<div class="sheet" id="report"><div class="rh"><div class="logo">${S.settings.logo?`<img src="${S.settings.logo}" alt="logo">`:''}</div><div class="rht"><div class="lab">${I('@set.lab',S.settings.lab)}</div><h1><textarea data-k="meta.title" class="ta-auto" rows="1">${esc(M.title)}</textarea></h1><div class="std">${I('meta.std',M.std)}</div></div>
+ <div class="rno"><b>Report No.</b>${I('meta.no',M.no,{ph:'e.g. QC/'+m.id.toUpperCase()+'/001'})}<b>Date of test</b>${I('meta.date',M.date,{t:'date'})}</div></div>
+ <div class="pgrid">
+  <div class="pf wide"><span>Name of work</span>${I('@p.name',P.name)}</div>
+  <div class="pf"><span>Client</span>${I('@p.client',P.client)}</div><div class="pf"><span>Consultant</span>${I('@p.consultant',P.consultant)}</div>
+  <div class="pf"><span>Contractor</span>${I('@p.contractor',P.contractor)}</div><div class="pf"><span>Agreement / Pkg No.</span>${I('@p.agreement',P.agreement)}</div>
+  <div class="pf"><span>Sample ID / Lab ref.</span>${I('meta.sample',M.sample)}</div><div class="pf"><span>Source / Supplier</span>${I('meta.source',M.source)}</div>
+  <div class="pf"><span>Location / Chainage</span>${I('meta.loc',M.loc)}</div><div class="pf"><span>Layer / Structure / Element</span>${I('meta.struct',M.struct)}</div>
+  <div class="pf"><span>Date of sampling</span>${I('meta.samp',M.samp,{t:'date'})}</div><div class="pf"><span>Qty. represented</span>${I('meta.qty',M.qty)}</div>
+ </div>
+ <div class="body">${m.view(d)}</div>
+ <div class="result" data-o="__result"></div>
+ <div class="rem"><b>Remarks / Observations</b><textarea data-k="meta.remarks" rows="2">${esc(M.remarks)}</textarea></div>
+ ${sigBlock(d)}</div>`}
+const main=$('#main'),nav=$('#nav');
+let lastRes=null,lastO={};
+function render(){const m=MOD[cur];if(!m)return;if(cur!=='scanner')stopCam();if(m.custom){m.render(main);lastRes=null;return}const d=D();main.innerHTML=shell(m,d);$$('.ta-auto',main).forEach(autoGrow);run()}
+function run(){const m=MOD[cur];if(!m||m.custom)return;const d=D();let o={};try{o=m.calc?m.calc(d)||{}:{}}catch(e){console.error(e)}lastO=o;
+ $$('[data-o]',main).forEach(el=>{const k=el.dataset.o;let v=o[k];if(k==='__result'){lastRes=v||null;el.className='result '+(v?v.s:'na');el.textContent=v?v.t:'';return}v=v==null?'':String(v);el.textContent=v;el.classList.toggle('pass',v==='PASS');el.classList.toggle('fail',v==='FAIL')});
+ $$('[data-oh]',main).forEach(el=>el.innerHTML=o[el.dataset.oh]||'');
+ requestAnimationFrame(()=>{try{m.draw&&m.draw(d,o,main)}catch(e){console.error(e)}})}
+function autoGrow(t){t.style.height='auto';t.style.height=t.scrollHeight+'px'}
+main.addEventListener('input',e=>{if(e.target.classList.contains('ta-auto'))autoGrow(e.target);const k=e.target.dataset.k;if(!k)return;const[o,p]=bind(k);sp(o,p,e.target.value);save();run()});
+main.addEventListener('change',e=>{const k=e.target.dataset.k;if(!k)return;const m=MOD[cur];const[o,p]=bind(k);sp(o,p,e.target.value);save();if(m.onChange&&m.onChange(k,D()))render();else run()});
+main.addEventListener('click',async e=>{const b=e.target.closest('[data-act]');if(!b)return;const a=b.dataset.act,m=MOD[cur];
+ if(a==='add'||a==='del'){const d=D(),l=b.dataset.l,arr=gp(d,l);if(a==='add')arr.push(m.blank?m.blank(l,d):{});else arr.splice(+b.dataset.i,1);save();render();return}
+ if(a==='sign'){signDialog(+b.dataset.i);return}
+ if(m.act){const r=await m.act(a,m.custom?null:D(),b);if(r){save();render()}}});
+function signDialog(i){const s=S.sig[i],d=D();if(!s.img){modal(`<h3>Signature for “${esc(s.label)}”</h3><p class="sub" style="color:var(--mut)">Draw the signature below. It will be saved for future reports.</p><canvas class="padc" id="mpad"></canvas><label class="fld" style="margin-top:8px"><span>Name</span><input id="mname" value="${esc(s.name)}" style="width:100%;padding:6px;border:1px solid var(--line);border-radius:5px;background:var(--bg);color:var(--ink)"></label><div class="btns" style="margin-top:10px"><button class="btn pri" id="msave">Save & sign</button><button class="btn" id="mclr">Clear</button><button class="btn" onclick="closeModal()">Cancel</button></div>`);
+  const pad=attachPad($('#mpad'));$('#mclr').onclick=()=>pad.clear();$('#msave').onclick=()=>{const png=pad.png();if(!png){toast('Draw a signature first');return}s.img=png;s.name=$('#mname').value;d.meta.sign[i]=true;d.meta.signAt[i]=today();save();closeModal();render()};return}
+ const signed=!!d.meta.sign[i];modal(`<h3>${esc(s.label)}${s.name?' – '+esc(s.name):''}</h3><div style="background:#fff;border-radius:6px;padding:8px;text-align:center"><img src="${s.img}" style="max-height:90px;max-width:100%"></div><div class="btns" style="margin-top:12px">${signed?'<button class="btn" id="munsign">Remove signature from this report</button>':'<button class="btn pri" id="msign">Sign this report</button>'}<button class="btn" id="mredraw">Redraw signature</button><button class="btn" onclick="closeModal()">Cancel</button></div>`);
+ $('#msign')&&($('#msign').onclick=()=>{d.meta.sign[i]=true;d.meta.signAt[i]=today();save();closeModal();render();toast('Report signed')});
+ $('#munsign')&&($('#munsign').onclick=()=>{delete d.meta.sign[i];delete d.meta.signAt[i];save();closeModal();render()});
+ $('#mredraw').onclick=()=>{s.img='';signDialog(i)}}
+
+function buildNav(){const groups={};MODS.forEach(m=>(groups[m.g]??=[]).push(m));nav.innerHTML=`<div class="nsearch"><input id="nq" placeholder="Search tests…" autocomplete="off"></div>`+Object.entries(groups).map(([g,ms])=>`<div class="ng"><div class="ngh">${g}</div>${ms.map(m=>`<a href="#${m.id}" data-id="${m.id}" class="${m.id===cur?'on':''}">${esc(m.title)}</a>`).join('')}</div>`).join('');
+ $('#nq').oninput=e=>{const q=e.target.value.toLowerCase();$$('nav a').forEach(a=>a.style.display=a.textContent.toLowerCase().includes(q)||MOD[a.dataset.id].g.toLowerCase().includes(q)?'':'none');$$('.ng').forEach(g=>g.style.display=$$('a',g).some(a=>a.style.display!=='none')?'':'none')}}
+function go(id){if(!MOD[id])id=MODS[0].id;cur=id;S.cur=id;save();$$('nav a').forEach(a=>a.classList.toggle('on',a.dataset.id===id));document.body.classList.remove('navopen');if(location.hash!=='#'+id)history.replaceState(null,'','#'+id);render();main.scrollTop=0;window.scrollTo(0,0);document.title=MOD[id].title+' · Civil Site Lab'}
+window.addEventListener('hashchange',()=>{const id=location.hash.slice(1);if(id&&id!==cur)go(id)});
+$('#menuBtn').onclick=()=>document.body.classList.toggle('navopen');$('#scrim').onclick=()=>document.body.classList.remove('navopen');
+let rz;window.addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>{if(!MOD[cur]?.custom)run()},150)});
+
+/* =================== PDF / share / save =================== */
+function fileName(){const m=MOD[cur];if(m.custom)return`Scanned-documents-${today()}.pdf`;const d=D();return(`${d.meta.title||m.title}_${d.meta.no||''}_${d.meta.date||today()}`).replace(/[^\w\-]+/g,'_').replace(/_+/g,'_').replace(/^_|_$/g,'')+'.pdf'}
+async function buildPdf(){if(!window.jspdf||!window.html2canvas){toast('PDF library not loaded — check internet connection once');return null}const{jsPDF}=window.jspdf;const m=MOD[cur];
+ if(m.custom){if(cur!=='scanner'){toast('Open a test tab to create its PDF');return null}if(!SCAN.length){toast('No scanned pages');return null}return scanPdf(null,'')}
+ const src=$('#report');const clone=src.cloneNode(true);clone.removeAttribute('id');
+ const oi=$$('input,select,textarea',src),ci=$$('input,select,textarea',clone);ci.forEach((el,i)=>{const o=oi[i];let v=o.tagName==='SELECT'?(o.options[o.selectedIndex]?.text||''):o.value;if(o.type==='date')v=fmtDate(v);const s=document.createElement('div');s.className='pv';s.textContent=v;el.replaceWith(s)});
+ const oc=$$('canvas',src),cc=$$('canvas',clone);cc.forEach((c,i)=>{const im=document.createElement('img');im.className='chimg';im.src=oc[i].toDataURL('image/png');c.replaceWith(im)});
+ $$('.np',clone).forEach(e=>e.remove());clone.classList.add('pdf');const host=document.createElement('div');host.className='pdfhost';host.appendChild(clone);document.body.appendChild(host);
+ await Promise.all($$('img',clone).map(im=>im.complete?0:new Promise(r=>{im.onload=im.onerror=r})));
+ const scale=2;let cv;try{cv=await html2canvas(clone,{scale,backgroundColor:'#ffffff',useCORS:true,logging:false,windowWidth:900})}catch(e){host.remove();throw e}
+ const top=clone.getBoundingClientRect().top;const br=$$('tr,.blk,.result,.rem,.sigs,.pgrid,.rh,img.chimg,.frow,h3,.note,.tw',clone).map(e=>(e.getBoundingClientRect().bottom-top)*scale).sort((a,b)=>a-b);host.remove();
+ const pdf=new jsPDF({unit:'mm',format:'a4',compress:true}),mg=8,pw=210-2*mg,ph=297-2*mg-6,pxmm=cv.width/pw,pageH=ph*pxmm;let y=0,pg=0;
+ while(y<cv.height-4){let end=Math.min(y+pageH,cv.height);if(end<cv.height){const c=br.filter(b=>b>y+pageH*0.35&&b<=end+0.5);if(c.length)end=c[c.length-1]}const h=Math.ceil(end-y);const pc=document.createElement('canvas');pc.width=cv.width;pc.height=h;const g=pc.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,pc.width,h);g.drawImage(cv,0,y,cv.width,h,0,0,cv.width,h);if(pg)pdf.addPage();pdf.addImage(pc.toDataURL('image/jpeg',0.92),'JPEG',mg,mg,pw,h/pxmm);pg++;y=end}
+ if(S.settings.annex&&SCAN.length)scanPdf(pdf,'Annexure – Scanned document');
+ const n=pdf.getNumberOfPages(),d=D();for(let i=1;i<=n;i++){pdf.setPage(i);pdf.setFontSize(7.5);pdf.setTextColor(110);pdf.text(`${d.meta.title||m.title}${d.meta.no?'  ·  Report No. '+d.meta.no:''}`,mg,297-6);pdf.text(`Page ${i} of ${n}`,210-mg,297-6,{align:'right'})}
+ return pdf}
+async function withBusy(fn){$('#busy').classList.add('on');try{return await fn()}catch(e){console.error(e);toast('Could not create PDF: '+(e.message||e))}finally{$('#busy').classList.remove('on')}}
+async function doPdf(){const pdf=await withBusy(buildPdf);if(pdf){download(pdf.output('blob'),fileName());toast('PDF downloaded')}}
+function summary(){const m=MOD[cur];if(m.custom)return'Scanned documents';const d=D(),P=S.project;return[`*${d.meta.title||m.title}*`,P.name&&`Project: ${P.name}`,d.meta.no&&`Report No: ${d.meta.no}`,`Date: ${fmtDate(d.meta.date)}`,d.meta.loc&&`Location: ${d.meta.loc}`,lastRes&&lastRes.s!=='na'&&`Result: ${lastRes.t}`].filter(Boolean).join('\n')}
+async function doShare(){const pdf=await withBusy(buildPdf);if(!pdf)return;const blob=pdf.output('blob'),name=fileName(),text=summary();const file=new File([blob],name,{type:'application/pdf'});
+ if(navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:name,text});return}catch(e){if(e.name==='AbortError')return}}
+ const enc=encodeURIComponent(text);modal(`<h3>Share report</h3><p style="color:var(--mut);margin-top:0">Your browser can’t attach files directly. Download the PDF, then attach it in the app you choose.</p><div class="btns"><button class="btn pri" id="shdl">⬇ Download PDF</button><a class="btn" target="_blank" rel="noopener" href="https://wa.me/?text=${enc}">WhatsApp</a><a class="btn" href="mailto:?subject=${encodeURIComponent(name)}&body=${enc}">Email</a><a class="btn" target="_blank" rel="noopener" href="https://t.me/share/url?url=%20&text=${enc}">Telegram</a><button class="btn" id="shcp">Copy summary</button><button class="btn" onclick="closeModal()">Close</button></div><pre style="white-space:pre-wrap;background:var(--bg);padding:10px;border-radius:6px;font-size:12px">${esc(text)}</pre>`);
+ $('#shdl').onclick=()=>download(blob,name);$('#shcp').onclick=()=>{navigator.clipboard?.writeText(text).then(()=>toast('Copied'),()=>toast('Copy failed'))}}
+function saveRec(){const m=MOD[cur];if(m.custom){toast('Open a test tab to save its report');return}const d=D();const id=d._rid||('r'+Date.now());d._rid=id;const rec={id,tab:cur,no:d.meta.no,date:d.meta.date,loc:[d.meta.loc,d.meta.sample].filter(Boolean).join(' / '),res:lastRes&&lastRes.s!=='na'?lastRes.t:'',at:new Date().toISOString(),data:deep(d)};const i=S.records.findIndex(r=>r.id===id);if(i>=0)S.records[i]=rec;else S.records.unshift(rec);saveNow();toast(i>=0?'Record updated':'Saved to Records')}
+$('#bPdf').onclick=doPdf;$('#bShare').onclick=doShare;$('#bSave').onclick=saveRec;$('#bPrint').onclick=()=>window.print();
+$('#bNew').onclick=()=>{const m=MOD[cur];if(m.custom)return toast('Open a test tab first');if(!confirm('Clear this test and start a new blank report?\n(Saved records are not affected.)'))return;S.tests[cur]=fresh(m);save();render()};
+document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();saveRec()}if(e.key==='Escape')closeModal()});
+
+cur=(location.hash.slice(1)&&MOD[location.hash.slice(1)])?location.hash.slice(1):(MOD[S.cur]?S.cur:'sv_gsb');
+buildNav();go(cur);
+</script>
+</body>
+</html>
