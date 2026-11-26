@@ -1,5 +1,5 @@
 // Offline cache for Civil Site Lab. Bump VERSION when any app file changes.
-const VERSION = 'civil-lab-v1';
+const VERSION = 'civil-lab-v2';
 const FILES = [
   './', './index.html', './manifest.webmanifest',
   './vendor/html2canvas.min.js', './vendor/jspdf.umd.min.js',

@@ -29,6 +29,8 @@ button{font:inherit;cursor:pointer}
 .top{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:8px;height:calc(52px + env(safe-area-inset-top,0px));padding:env(safe-area-inset-top,0px) max(10px,env(safe-area-inset-right,0px)) 0 max(10px,env(safe-area-inset-left,0px));background:var(--nav);color:#fff;box-shadow:0 1px 0 rgba(255,255,255,.06)}
 .ib{background:transparent;border:0;color:#fff;font-size:20px;width:36px;height:36px;border-radius:6px}
 .ib:hover{background:var(--navh)}
+#backBtn{display:flex;align-items:center;justify-content:center}
+#backBtn[disabled]{opacity:.35;cursor:default;background:transparent}
 .brand{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700;letter-spacing:.2px}
 .brand small{font-weight:400;opacity:.7;margin-left:6px}
 .acts{display:flex;gap:6px}
@@ -175,7 +177,7 @@ img.chimg{width:100%;display:block;margin-top:10px;border:1px solid #c5cdd5}
 .chk input{width:auto}
 #toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#1c2b3a;color:#fff;padding:9px 16px;border-radius:20px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:100;max-width:90vw;text-align:center}
 #toast.on{opacity:1}
-#modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:90;padding:14px}
+#modal{position:fixed;inset:calc(52px + env(safe-area-inset-top,0px)) 0 0 0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:90;padding:14px}
 #modal.on{display:flex}
 .mbox{background:var(--panel);color:var(--ink);border-radius:10px;padding:18px;max-width:560px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,.3)}
 .mbox h3{margin:0 0 10px}
@@ -197,6 +199,7 @@ img.chimg{width:100%;display:block;margin-top:10px;border:1px solid #c5cdd5}
 </head>
 <body>
 <header class="top">
+ <button class="ib" id="backBtn" aria-label="Back" title="Back (Alt+←)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
  <button class="ib" id="menuBtn" aria-label="Menu">☰</button>
  <div class="brand">Civil Site Lab <small>On-site Test Report Generator</small></div>
  <div class="acts">
@@ -232,8 +235,8 @@ const rep=(n,fn)=>Array.from({length:n},fn);
 function gp(o,p){return p.split('.').reduce((a,k)=>a==null?a:a[k],o)}
 function sp(o,p,v){const ks=p.split('.');let a=o;for(let i=0;i<ks.length-1;i++){if(a[ks[i]]==null)a[ks[i]]=/^\d+$/.test(ks[i+1])?[]:{};a=a[ks[i]]}a[ks[ks.length-1]]=v}
 function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),2600)}
-function modal(html){$('#mbox').innerHTML=html;$('#modal').classList.add('on')}
-function closeModal(){$('#modal').classList.remove('on');$('#mbox').innerHTML=''}
+function modal(html){$('#mbox').innerHTML=html;$('#modal').classList.add('on');window.updBack&&updBack()}
+function closeModal(){$('#modal').classList.remove('on');$('#mbox').innerHTML='';window.updBack&&updBack()}
 $('#modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});
 /* native Android app (Capacitor): save/share files through the OS */
 const CAP=window.Capacitor,NATIVE=!!(CAP&&CAP.isNativePlatform&&CAP.isNativePlatform());
@@ -817,9 +820,15 @@ function signDialog(i){const s=S.sig[i],d=D();if(!s.img){modal(`<h3>Signature fo
 
 function buildNav(){const groups={};MODS.forEach(m=>(groups[m.g]??=[]).push(m));nav.innerHTML=`<div class="nsearch"><input id="nq" placeholder="Search tests…" autocomplete="off"></div>`+Object.entries(groups).map(([g,ms])=>`<div class="ng"><div class="ngh">${g}</div>${ms.map(m=>`<a href="#${m.id}" data-id="${m.id}" class="${m.id===cur?'on':''}">${esc(m.title)}</a>`).join('')}</div>`).join('');
  $('#nq').oninput=e=>{const q=e.target.value.toLowerCase();$$('nav a').forEach(a=>a.style.display=a.textContent.toLowerCase().includes(q)||MOD[a.dataset.id].g.toLowerCase().includes(q)?'':'none');$$('.ng').forEach(g=>g.style.display=$$('a',g).some(a=>a.style.display!=='none')?'':'none')}}
-function go(id){if(!MOD[id])id=MODS[0].id;cur=id;S.cur=id;save();$$('nav a').forEach(a=>a.classList.toggle('on',a.dataset.id===id));document.body.classList.remove('navopen');if(location.hash!=='#'+id)history.replaceState(null,'','#'+id);render();main.scrollTop=0;window.scrollTo(0,0);document.title=MOD[id].title+' · Civil Site Lab'}
-window.addEventListener('hashchange',()=>{const id=location.hash.slice(1);if(id&&id!==cur)go(id)});
-$('#menuBtn').onclick=()=>document.body.classList.toggle('navopen');$('#scrim').onclick=()=>document.body.classList.remove('navopen');
+let navDepth=0;
+function updBack(){$('#backBtn').disabled=navDepth<=0&&!$('#modal').classList.contains('on')&&!document.body.classList.contains('navopen')}
+function go(id,push=true){if(!MOD[id])id=MODS[0].id;const changed=id!==cur;cur=id;S.cur=id;save();$$('nav a').forEach(a=>a.classList.toggle('on',a.dataset.id===id));document.body.classList.remove('navopen');if(location.hash!=='#'+id||!history.state){if(push&&changed&&history.state){navDepth++;history.pushState({d:navDepth},'','#'+id)}else history.replaceState({d:navDepth},'','#'+id)}updBack();render();main.scrollTop=0;window.scrollTo(0,0);document.title=MOD[id].title+' · Civil Site Lab'}
+window.addEventListener('popstate',e=>{if($('#modal').classList.contains('on'))closeModal();document.body.classList.remove('navopen');navDepth=e.state&&e.state.d||0;const id=location.hash.slice(1);if(id&&id!==cur)go(id,false);else updBack()});
+nav.addEventListener('click',e=>{const a=e.target.closest('a[data-id]');if(!a)return;e.preventDefault();go(a.dataset.id)});
+function goBack(){if($('#modal').classList.contains('on')){closeModal();updBack();return}if(document.body.classList.contains('navopen')){document.body.classList.remove('navopen');updBack();return}if(navDepth>0)history.back();else toast('This is the first page')}
+$('#backBtn').onclick=goBack;
+document.addEventListener('keydown',e=>{if(e.altKey&&e.key==='ArrowLeft'){e.preventDefault();goBack()}});
+$('#menuBtn').onclick=()=>{document.body.classList.toggle('navopen');updBack()};$('#scrim').onclick=()=>{document.body.classList.remove('navopen');updBack()};
 let rz;window.addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>{if(!MOD[cur]?.custom)run()},150)});
 
 /* =================== PDF / share / save =================== */
@@ -860,7 +869,7 @@ const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent),standalone=matchMedia(
 if(isIOS&&!standalone&&/^https:$/.test(location.protocol)){let seen=0;try{seen=+localStorage.getItem('civlab_ios_tip')||0}catch(e){}if(!seen){setTimeout(()=>{toast('To install: tap Share ⎋ then “Add to Home Screen”');try{localStorage.setItem('civlab_ios_tip','1')}catch(e){}},1500)}}
 
 cur=(location.hash.slice(1)&&MOD[location.hash.slice(1)])?location.hash.slice(1):(MOD[S.cur]?S.cur:'sv_gsb');
-buildNav();go(cur);
+buildNav();history.replaceState({d:0},'','#'+cur);go(cur,false);
 </script>
 </body>
 </html>

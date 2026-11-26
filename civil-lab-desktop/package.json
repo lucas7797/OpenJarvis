@@ -1,7 +1,7 @@
 {
   "name": "civil-site-lab",
   "productName": "Civil Site Lab",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "On-site civil test report generator",
   "author": "Civil Site Lab",
   "main": "main.js",
