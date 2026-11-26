@@ -1,0 +1,61 @@
+{
+  "name": "civil-site-lab",
+  "productName": "Civil Site Lab",
+  "version": "1.0.0",
+  "description": "On-site civil test report generator",
+  "author": "Civil Site Lab",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "copy-web": "node scripts/copy-web.js",
+    "start": "npm run copy-web && electron .",
+    "dist:win": "npm run copy-web && sh scripts/build-installer.sh",
+    "dist:mac": "npm run copy-web && electron-builder --mac",
+    "dist:linux": "npm run copy-web && electron-builder --linux AppImage",
+    "dist:win:portable": "npm run copy-web && electron-builder --win portable --x64"
+  },
+  "devDependencies": {
+    "electron": "33.4.11",
+    "electron-builder": "25.1.8",
+    "resedit": "^1.7.2"
+  },
+  "build": {
+    "appId": "com.civilsitelab.desktop",
+    "productName": "Civil Site Lab",
+    "copyright": "Civil Site Lab",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "app/**/*"
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "artifactName": "CivilSiteLab-Setup-${version}.${ext}",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Civil Site Lab",
+      "runAfterFinish": true
+    },
+    "portable": {
+      "artifactName": "CivilSiteLab-Portable-${version}.exe"
+    },
+    "mac": {
+      "icon": "build/icon.png",
+      "category": "public.app-category.productivity"
+    },
+    "linux": {
+      "icon": "build/icon.png",
+      "category": "Office"
+    },
+    "afterPack": "./scripts/after-pack.js"
+  }
+}
