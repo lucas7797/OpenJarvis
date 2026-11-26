@@ -10,7 +10,12 @@ Unicode true
 !define UNINSTKEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\CivilSiteLab"
 
 Name "${APPNAME}"
-OutFile "build\CivilSiteLab-Setup-${VERSION}.exe"
+!ifdef ONECLICK
+  OutFile "build\CivilSiteLab-OneClick-Setup-${VERSION}.exe"
+  SilentInstall silent          ; no wizard: install with defaults, then open the app
+!else
+  OutFile "build\CivilSiteLab-Setup-${VERSION}.exe"
+!endif
 InstallDir "$LOCALAPPDATA\Programs\Civil Site Lab"
 InstallDirRegKey HKCU "Software\CivilSiteLab" "InstallDir"
 RequestExecutionLevel user          ; no admin rights needed
@@ -56,6 +61,15 @@ Var StartMenuFolder
 !insertmacro MUI_UNPAGE_INSTFILES
 
 !insertmacro MUI_LANGUAGE "English"
+
+Function .onInit
+  StrCpy $StartMenuFolder "${APPNAME}"
+FunctionEnd
+
+Function .onInstSuccess
+  IfSilent 0 +2
+    Call LaunchApp
+FunctionEnd
 
 Function LaunchApp
   ExecShell "" "$SYSDIR\wscript.exe" '"$INSTDIR\launch.vbs"'

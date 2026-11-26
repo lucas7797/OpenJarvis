@@ -22,4 +22,5 @@ another computer or phone.
 To remove: Settings -> Apps -> Civil Site Lab -> Uninstall.
 EOF
 makensis -V2 CivilSiteLab.nsi
+makensis -V2 -DONECLICK CivilSiteLab.nsi
 ls -la build/*.exe
